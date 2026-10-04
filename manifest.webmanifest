@@ -1,0 +1,13 @@
+{
+  "name": "Saxcrafter",
+  "short_name": "Saxcrafter",
+  "description": "Editor de partituras com som real de saxofone",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d0a07",
+  "theme_color": "#0d0a07",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
