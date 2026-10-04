@@ -19,8 +19,8 @@
     --black-key:#120d08; --white-key:#1b140c; --c-row:#2a1e0f;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:radial-gradient(1200px 500px at 50% -10%,#2a1c0a 0%,var(--bg) 60%)}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{height:100vh;height:100dvh;display:flex;flex-direction:column;background:radial-gradient(1200px 500px at 50% -10%,#2a1c0a 0%,var(--bg) 60%)}
   header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
   header svg{width:34px;height:34px;flex:none}
   h1{font-size:20px;margin:0;letter-spacing:.5px;color:var(--gold);font-weight:700}
@@ -46,7 +46,7 @@
   input[type=range]{accent-color:var(--amber);width:110px}
   #status{margin-left:auto;font-size:12px;color:var(--muted)}
   #status.ok{color:var(--amber)}
-  main{flex:1;min-height:min(440px,62vh);display:flex;padding:12px 16px 16px}
+  main{flex:1;min-height:0;display:flex;padding:12px 16px 16px}
   #wrap{position:relative;flex:1;min-width:0;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);
         -webkit-user-select:none;user-select:none;overscroll-behavior:contain}
   #grid{position:relative}
@@ -64,12 +64,12 @@
 
   /* camada das notas: acima da grade, só as notas recebem o mouse/toque */
   #layer{position:absolute;left:54px;top:0;pointer-events:none;z-index:2}
-  .note{position:absolute;height:18px;border-radius:5px;pointer-events:auto;cursor:grab;touch-action:none;
+  .note{position:absolute;height:18px;border-radius:5px;pointer-events:auto;cursor:grab;touch-action:pan-x pan-y;-webkit-touch-callout:none;
         background:linear-gradient(180deg,var(--amber),var(--brass));border:1px solid #ffe6a0;
         box-shadow:0 0 8px #f0b42955;overflow:hidden;display:flex;align-items:center}
   .note:hover{filter:brightness(1.12)}
   .note .nm{font-size:10px;font-weight:700;color:#2a1b05;padding-left:5px;pointer-events:none;white-space:nowrap}
-  .note .grip{position:absolute;right:0;top:0;bottom:0;width:10px;max-width:42%;cursor:ew-resize;
+  .note .grip{position:absolute;right:0;top:0;bottom:0;width:10px;max-width:42%;cursor:ew-resize;touch-action:none;
         background:linear-gradient(90deg,transparent,#00000050);border-left:1px solid #00000030}
   .note .grip::after{content:"";position:absolute;right:3px;top:5px;bottom:5px;width:2px;border-radius:1px;background:#2a1b05aa}
   .note.sel{outline:2px solid #fff3c4;outline-offset:1px;z-index:3}
@@ -81,7 +81,8 @@
   #playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);z-index:4;pointer-events:none;display:none}
   #tip{position:fixed;z-index:60;pointer-events:none;display:none;background:#0d0a07ee;border:1px solid var(--gold);
        color:var(--amber);padding:4px 9px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
-  .adv{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;width:100%;padding-top:10px;border-top:1px solid var(--line)}
+  header,.toolbar{flex:none}
+  .adv{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;width:100%;padding-top:10px;border-top:1px solid var(--line);max-height:40vh;max-height:40dvh;overflow:auto;-webkit-overflow-scrolling:touch}
   .adv[hidden]{display:none}
   ul.how{margin:0;padding-left:18px;font-size:14px;line-height:1.55}
   ul.how li{margin-bottom:8px}
@@ -159,6 +160,7 @@
     <button id="score" class="gold" aria-label="Partitura em PDF">🎼 Partitura<span class="lbl"> (PDF)</span></button>
   </div>
   <div class="group">
+    <button id="installBtn" class="gold" hidden aria-label="Instalar aplicativo">📲<span class="lbl"> Instalar</span></button>
     <button id="adjBtn" title="Ajustes e exportação" aria-label="Ajustes">⚙<span class="lbl"> Ajustes</span></button>
     <button id="helpBtn" title="Como usar" aria-label="Como usar">❓<span class="lbl"> Ajuda</span></button>
   </div>
@@ -220,7 +222,8 @@
     <div class="mbody">
       <ul class="how">
         <li><b>Criar uma nota:</b> clique (ou toque) numa célula vazia da grade. No computador, arraste para o lado para já definir a duração.</li>
-        <li><b>Mover:</b> arraste a nota. Para cima ou para baixo muda o tom, para os lados muda o tempo.</li>
+        <li><b>Mover:</b> arraste a nota. Para cima ou para baixo muda o tom, para os lados muda o tempo. No celular, segure a nota por meio segundo até vibrar e então arraste.</li>
+        <li><b>Rolar a grade:</b> arraste o dedo em qualquer lugar da grade, inclusive sobre as notas. A barra de cima fica sempre visível.</li>
         <li><b>Duração livre:</b> arraste a alça na borda direita da nota. Vale qualquer tamanho, como a colcheia pontuada (3 passos de 1/16).</li>
         <li><b>Remover:</b> toque duas vezes na nota (no computador: duplo clique, botão direito ou <kbd>Delete</kbd>).</li>
         <li><b>Ouvir um tom:</b> toque no nome da nota na coluna da esquerda.</li>
@@ -230,6 +233,11 @@
         <li><b>Salvar e exportar:</b> 📁 Projetos guarda na biblioteca ou numa pasta, 🎼 Partitura gera o PDF, e em ⚙ Ajustes ficam MIDI, WAV, JSON e Importar.</li>
         <li><b>Instalar no celular:</b> no menu do navegador, escolha "Instalar aplicativo" ou "Adicionar à tela inicial".</li>
       </ul>
+      <div class="sec" style="margin-top:16px">
+        <h3>Instalação</h3>
+        <div class="rowline"><button id="chkBtn">Verificar instalação</button></div>
+        <pre id="chkOut" class="fine" style="white-space:pre-wrap;margin:0"></pre>
+      </div>
     </div>
   </div>
 </div>
@@ -532,20 +540,43 @@
     const n = el._n;
     select(el);
     const resize = e.target.classList.contains('grip');
-    drag = {mode: resize ? 'resize' : 'move', n, el, x0:e.clientX, y0:e.clientY, s0:n.s, p0:n.p, d0:n.d, moved:false, id:e.pointerId, created:false};
-    el.classList.add('drag');
-    document.body.classList.add(resize ? 'resizing' : 'moving');
+    const pending = e.pointerType === 'touch' && !resize;      // no toque, mover exige segurar a nota
+    drag = {mode: resize ? 'resize' : 'move', n, el, x0:e.clientX, y0:e.clientY, s0:n.s, p0:n.p, d0:n.d, moved:false, id:e.pointerId, created:false,
+            pending, armed: !pending, held:false, timer:0};
+    if(pending){
+      drag.timer = setTimeout(() => {
+        if(!drag || drag.el !== el || !drag.pending) return;
+        drag.pending = false; drag.armed = true; drag.held = true;
+        el.classList.add('drag'); document.body.classList.add('moving');
+        if(navigator.vibrate) try{ navigator.vibrate(15); }catch(_){}
+        showTip({clientX:drag.x0, clientY:drag.y0}, n);
+      }, 330);
+    } else {
+      el.classList.add('drag');
+      document.body.classList.add(resize ? 'resizing' : 'moving');
+    }
     lastPreviewPitch = n.p;
     if(!resize) previewNote(n.p, 0.35);
   });
   $('layer').addEventListener('contextmenu', e => {
     const el = e.target.closest('.note');
-    if(el){ e.preventDefault(); removeNote(el._n); }
+    if(!el) return;
+    e.preventDefault();
+    // segurar o dedo dispara "menu de contexto" no celular: só o botão direito do mouse remove
+    const touchy = e.pointerType === 'touch' || (e.pointerType == null && !!window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+    if(!touchy) removeNote(el._n);
   });
+  // com a nota "agarrada" (após segurar), o gesto move a nota em vez de rolar a grade
+  window.addEventListener('touchmove', e => { if(drag && drag.armed && e.cancelable) e.preventDefault(); }, {passive:false});
 
   window.addEventListener('pointermove', e => {
     if(!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if(drag.pending){
+      // moveu antes de segurar: é um gesto de rolagem, não de mover a nota
+      if(Math.hypot(dx, dy) > 10){ clearTimeout(drag.timer); drag.el.classList.remove('drag'); drag = null; }
+      return;
+    }
     if(!drag.moved && Math.hypot(dx, dy) < 4) return;
     drag.moved = true;
     const n = drag.n, total = steps(), free = e.shiftKey;
@@ -568,13 +599,13 @@
       if(!cancelled && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 8) createAt(e, t.cells, false);
     }
     if(!drag || e.pointerId !== drag.id) return;
-    const d = drag; drag = null;
+    const d = drag; drag = null; clearTimeout(d.timer);
     d.el.classList.remove('drag');
     document.body.classList.remove('resizing', 'moving');
     hideTip();
     if(d.moved){
       if(d.mode === 'resize') lastD = d.n.d;
-    } else if(!d.created && !cancelled){
+    } else if(!d.created && !d.held && !cancelled){
       // toque/clique simples numa nota: duplo toque remove
       const now = performance.now();
       if(lastTap && lastTap.n === d.n && now - lastTap.t < 320){ lastTap = null; removeNote(d.n); }
@@ -1196,6 +1227,48 @@
   syncAdj();
   $('adjBtn').onclick = () => { adv.hidden = !adv.hidden; syncAdj(); };
   $('helpBtn').onclick = () => openModal('mHelp');
+
+  /* ---------- instalação (PWA) ---------- */
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('installBtn').hidden = false; });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; $('installBtn').hidden = true; setStatus('Aplicativo instalado', true); });
+  $('installBtn').onclick = async () => {
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try{ await deferredPrompt.userChoice; }catch(e){}
+    deferredPrompt = null; $('installBtn').hidden = true;
+  };
+  $('chkBtn').onclick = async () => {
+    const out = $('chkOut'); const L = [];
+    const line = (good, t) => L.push((good === null ? 'ℹ️ ' : good ? '✅ ' : '❌ ') + t);
+    out.textContent = 'Verificando…';
+    line(window.isSecureContext, 'Página em HTTPS');
+    let mf = null;
+    try{
+      const r = await fetch('manifest.json', {cache:'no-store'});
+      line(r.ok, 'manifest.json (' + r.status + ', ' + (r.headers.get('content-type') || 'sem tipo') + ')');
+      if(r.ok) mf = await r.json();
+    }catch(e){ line(false, 'manifest.json não pôde ser lido'); }
+    if(mf){
+      line(!!mf.start_url && !!mf.scope, 'start_url e scope definidos');
+      for(const ic of (mf.icons || [])){
+        try{
+          const r = await fetch(ic.src, {cache:'no-store'});
+          const ct = r.headers.get('content-type') || '';
+          line(r.ok && /png/.test(ct), ic.src + ' (' + r.status + ', ' + (ct || 'sem tipo') + ')');
+        }catch(e){ line(false, ic.src + ' não encontrado'); }
+      }
+    }
+    try{
+      const regs = await navigator.serviceWorker.getRegistrations();
+      line(regs.length > 0, 'Service worker registrado');
+    }catch(e){ line(false, 'Service worker indisponível'); }
+    line(!!deferredPrompt, 'O Chrome oferece a instalação (aparece o botão 📲 Instalar)');
+    line(null, (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ? 'Aberto como aplicativo instalado' : 'Aberto no navegador');
+    line(null, 'Endereço: ' + location.href);
+    if(L.some(x => x.startsWith('❌'))) L.push('', 'Um ❌ em manifest.json ou em um ícone significa que esse arquivo não está na mesma pasta do index.html no GitHub, ou está com outro nome.');
+    out.textContent = L.join('\n');
+  };
 
   /* ---------- eventos da barra ---------- */
   $('play').onclick = play;
