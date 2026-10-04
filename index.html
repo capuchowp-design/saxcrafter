@@ -21,41 +21,98 @@
   header svg{width:34px;height:34px;flex:none}
   h1{font-size:20px;margin:0;letter-spacing:.5px;color:var(--gold);font-weight:700}
   h1 small{display:block;font-size:11px;color:var(--muted);font-weight:400;letter-spacing:1.5px;text-transform:uppercase}
+  #pname{margin-left:auto;font-size:13px;color:var(--muted);cursor:pointer;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+         border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel)}
+  #pname:hover{border-color:var(--brass);color:var(--text)}
+  #pname b{color:var(--gold);font-weight:600}
   .toolbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
   .group{display:flex;align-items:center;gap:6px}
   label{font-size:12px;color:var(--muted)}
-  button,select,input[type=number]{
+  button,select,input[type=number],input[type=text]{
     background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;
     padding:8px 12px;font-size:14px;cursor:pointer;font-family:inherit}
+  input[type=text]{cursor:text}
   button:hover,select:hover{border-color:var(--brass)}
+  button:disabled{opacity:.45;cursor:default}
   button.primary{background:linear-gradient(180deg,var(--amber),var(--gold));color:#1a1204;border-color:var(--gold);font-weight:700}
   button.primary:hover{filter:brightness(1.08)}
   button.active{border-color:var(--amber);color:var(--amber)}
+  button.gold{border-color:var(--gold);color:var(--amber)}
   input[type=number]{width:70px}
   input[type=range]{accent-color:var(--amber);width:110px}
   #status{margin-left:auto;font-size:12px;color:var(--muted)}
   #status.ok{color:var(--amber)}
-  main{flex:1;min-height:0;display:flex;padding:12px 16px 16px}
-  #wrap{position:relative;flex:1;min-width:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  main{flex:1;min-height:0;display:flex;padding:12px 16px 8px}
+  #wrap{position:relative;flex:1;min-width:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+        -webkit-user-select:none;user-select:none;overscroll-behavior:contain}
   #grid{position:relative}
+  #rows{position:relative}
   .row{display:flex;height:22px}
-  .lab{position:sticky;left:0;z-index:3;width:54px;flex:none;font-size:11px;line-height:22px;padding-left:8px;
-       color:var(--muted);border-right:1px solid var(--line);border-bottom:1px solid #00000040;cursor:pointer;user-select:none}
+  .lab{position:sticky;left:0;z-index:5;width:54px;flex:none;font-size:11px;line-height:22px;padding-left:8px;
+       color:var(--muted);border-right:1px solid var(--line);border-bottom:1px solid #00000040;cursor:pointer}
   .lab.white{background:#241a0e}
   .lab.black{background:#0e0a06;color:#6f5f40}
   .lab.c{color:var(--gold);font-weight:700}
-  .cells{position:relative;flex:none;border-bottom:1px solid #00000040}
+  .cells{position:relative;flex:none;border-bottom:1px solid #00000040;cursor:cell;touch-action:pan-x pan-y}
   .cells.white{background-color:var(--white-key)}
   .cells.black{background-color:var(--black-key)}
   .cells.c{box-shadow:inset 0 -1px 0 var(--c-row)}
-  .note{position:absolute;top:2px;height:18px;border-radius:5px;z-index:2;
-        background:linear-gradient(180deg,var(--amber),var(--brass));border:1px solid #ffe6a0;pointer-events:none;
-        box-shadow:0 0 8px #f0b42955}
+
+  /* camada das notas: acima da grade, só as notas recebem o mouse/toque */
+  #layer{position:absolute;left:54px;top:0;pointer-events:none;z-index:2}
+  .note{position:absolute;height:18px;border-radius:5px;pointer-events:auto;cursor:grab;touch-action:none;
+        background:linear-gradient(180deg,var(--amber),var(--brass));border:1px solid #ffe6a0;
+        box-shadow:0 0 8px #f0b42955;overflow:hidden;display:flex;align-items:center}
+  .note:hover{filter:brightness(1.12)}
+  .note .nm{font-size:10px;font-weight:700;color:#2a1b05;padding-left:5px;pointer-events:none;white-space:nowrap}
+  .note .grip{position:absolute;right:0;top:0;bottom:0;width:10px;max-width:42%;cursor:ew-resize;
+        background:linear-gradient(90deg,transparent,#00000050);border-left:1px solid #00000030}
+  .note .grip::after{content:"";position:absolute;right:3px;top:5px;bottom:5px;width:2px;border-radius:1px;background:#2a1b05aa}
+  .note.sel{outline:2px solid #fff3c4;outline-offset:1px;z-index:3}
+  .note.drag{cursor:grabbing;z-index:6;filter:brightness(1.18);box-shadow:0 0 14px #f0b429aa}
+  body.resizing, body.resizing *{cursor:ew-resize !important}
+  body.moving, body.moving *{cursor:grabbing !important}
+  @media (pointer:coarse){ .note .grip{width:16px} .note{height:20px} }
+
   #playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);z-index:4;pointer-events:none;display:none}
-  .help{font-size:12px;color:var(--muted);padding:8px 16px 14px}
+  #tip{position:fixed;z-index:60;pointer-events:none;display:none;background:#0d0a07ee;border:1px solid var(--gold);
+       color:var(--amber);padding:4px 9px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
+  .help{font-size:12px;color:var(--muted);padding:6px 16px 14px;line-height:1.55}
   .help b{color:var(--gold)}
-  #loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0d0a07cc;z-index:20;color:var(--gold)}
-  @media (max-width:600px){ input[type=range]{width:80px} }
+  .help kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px;color:var(--text)}
+  #loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0d0a07cc;z-index:80;color:var(--gold)}
+
+  /* janelas (Projetos e Partitura) */
+  .modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+  .modal[hidden]{display:none}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(640px,100%);max-height:94vh;display:flex;flex-direction:column;
+         box-shadow:0 20px 60px #000c}
+  .sheet.wide{width:min(980px,100%)}
+  .mhead{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .mhead h2{margin:0;font-size:17px;color:var(--gold)}
+  .mhead .x{margin-left:auto;padding:4px 10px}
+  .mbody{padding:14px 16px;overflow:auto;flex:1;min-height:0}
+  .sec{margin:0 0 18px}
+  .sec h3{margin:0 0 8px;font-size:12px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .rowline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  .rowline input[type=text]{flex:1;min-width:140px}
+  ul.list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  ul.list li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  ul.list li:last-child{border-bottom:0}
+  ul.list li .t{flex:1;min-width:0}
+  ul.list li .t b{display:block;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  ul.list li .t small{color:var(--muted);font-size:11px}
+  ul.list li.empty{color:var(--muted);font-size:13px;justify-content:center}
+  ul.list button{padding:5px 10px;font-size:13px}
+  .fine{font-size:12px;color:var(--muted);line-height:1.5}
+  .opts{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .opts label{display:flex;flex-direction:column;gap:3px}
+  .opts input[type=text]{min-width:210px}
+  #scBody{background:#2b2218}
+  .paper{background:#fff;margin:0 auto 16px;max-width:794px;box-shadow:0 4px 18px #0009}
+  .paper svg{display:block;width:100%;height:auto}
+  .msg{color:var(--text);padding:30px 10px;text-align:center;font-size:14px}
+  @media (max-width:600px){ input[type=range]{width:80px} #pname{max-width:100%;margin-left:0} header{flex-wrap:wrap} }
 </style>
 </head>
 <body>
@@ -67,6 +124,7 @@
     <circle cx="40" cy="14" r="2.5" fill="#f0b429"/><circle cx="40" cy="24" r="2.5" fill="#f0b429"/><circle cx="40" cy="34" r="2.5" fill="#f0b429"/>
   </svg>
   <h1>Saxcrafter<small>Editor de partituras com saxofone real</small></h1>
+  <div id="pname" title="Abrir projetos">Projeto: <b>Sem título</b></div>
 </header>
 
 <div class="toolbar">
@@ -86,8 +144,9 @@
   <div class="group"><label for="bpm">BPM</label><input id="bpm" type="number" min="30" max="240" value="100"></div>
   <div class="group"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></div>
   <div class="group"><label for="meas">Compassos</label><input id="meas" type="number" min="1" max="64" value="4"></div>
-  <div class="group"><label for="len">Duração</label>
+  <div class="group"><label for="len">Nova nota</label>
     <select id="len">
+      <option value="last">Última editada</option>
       <option value="1">Semicolcheia</option>
       <option value="2">Colcheia</option>
       <option value="4" selected>Semínima</option>
@@ -95,40 +154,146 @@
       <option value="16">Semibreve</option>
     </select>
   </div>
+  <div class="group"><label for="snap">Ímã</label>
+    <select id="snap" title="Alinhamento ao arrastar (segure Shift para ignorar)">
+      <option value="0">Livre</option>
+      <option value="0.5">1/32</option>
+      <option value="1" selected>1/16</option>
+      <option value="2">1/8</option>
+      <option value="4">1/4</option>
+    </select>
+  </div>
   <div class="group">
-    <button id="save">Salvar</button>
-    <button id="load">Carregar</button>
+    <button id="projects">📁 Projetos</button>
+    <button id="save" title="Salvar (Ctrl+S)">💾 Salvar</button>
     <button id="clear">Limpar</button>
   </div>
   <div class="group">
-    <button id="exJson">JSON</button>
-    <button id="imJson">Importar</button>
+    <button id="score" class="gold">🎼 Partitura (PDF)</button>
     <button id="exMidi">MIDI</button>
     <button id="exWav">WAV</button>
+    <button id="exJson">JSON</button>
+    <button id="imJson">Importar</button>
   </div>
   <div id="status">Carregando saxofone…</div>
 </div>
 
-<main><div id="wrap"><div id="grid"></div><div id="playhead"></div></div></main>
-<div class="help"><b>Toque</b> numa célula para inserir uma nota (com a duração escolhida) e toque na nota para removê-la. Toque no nome da nota à esquerda para ouvi-la. Acordes: coloque várias notas no mesmo tempo.</div>
+<main>
+  <div id="wrap">
+    <div id="grid">
+      <div id="rows"></div>
+      <div id="layer"></div>
+      <div id="playhead"></div>
+    </div>
+  </div>
+</main>
+<div class="help">
+  <b>Criar:</b> clique numa célula vazia (arraste para o lado para já definir a duração) ·
+  <b>Mover:</b> arraste a nota (para cima/baixo muda o tom, para os lados muda o tempo) ·
+  <b>Duração:</b> arraste a borda direita da nota, com qualquer valor (ex.: colcheia pontuada = 3 passos de 1/16) ·
+  <b>Remover:</b> duplo clique/toque, botão direito ou <kbd>Delete</kbd> ·
+  <b>Livre:</b> segure <kbd>Shift</kbd> ao arrastar para ignorar o ímã ·
+  <b>Teclado:</b> com uma nota selecionada, <kbd>↑</kbd><kbd>↓</kbd> mudam o tom (+<kbd>Shift</kbd> = oitava) e <kbd>←</kbd><kbd>→</kbd> movem no tempo.
+</div>
+<div id="tip"></div>
 <div id="loading">Gerando arquivo…</div>
-<input id="file" type="file" accept="application/json" hidden>
+<input id="file" type="file" accept="application/json,.json" hidden>
+
+<!-- Projetos: biblioteca do aplicativo + pasta do dispositivo -->
+<div class="modal" id="mProj" hidden>
+  <div class="sheet">
+    <div class="mhead"><h2>Projetos</h2><button class="x" data-close>✕</button></div>
+    <div class="mbody">
+      <div class="sec">
+        <h3>Nome do projeto</h3>
+        <div class="rowline">
+          <input type="text" id="projNameIn" maxlength="60" placeholder="Ex.: Minha melodia">
+          <button id="saveLib" class="primary">Salvar na biblioteca</button>
+        </div>
+        <div class="fine">A biblioteca fica guardada neste navegador, dentro do aplicativo, e funciona em qualquer aparelho.</div>
+      </div>
+      <div class="sec">
+        <h3>Biblioteca do aplicativo</h3>
+        <ul class="list" id="libList"></ul>
+      </div>
+      <div class="sec" id="folderSec">
+        <h3>Pasta no seu dispositivo</h3>
+        <div class="rowline">
+          <span class="fine">Pasta: <b id="folderName" style="color:var(--text)">nenhuma</b></span>
+          <button id="pickFolder">Escolher pasta…</button>
+          <button id="reconnect" hidden>Reconectar à pasta</button>
+          <button id="saveFolder">Salvar na pasta</button>
+        </div>
+        <ul class="list" id="folderList"></ul>
+        <div class="fine" id="folderNote" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Partitura -->
+<div class="modal" id="mScore" hidden>
+  <div class="sheet wide">
+    <div class="mhead"><h2>Partitura</h2><button class="x" data-close>✕</button></div>
+    <div class="opts">
+      <label>Título <input type="text" id="scTitle" maxlength="60" placeholder="Título da música"></label>
+      <label>Escrita
+        <select id="scMode">
+          <option value="sax">Transposta para o sax</option>
+          <option value="concert">Em dó (som real)</option>
+        </select>
+      </label>
+      <label>Clave
+        <select id="scClef">
+          <option value="auto">Automática</option>
+          <option value="treble">Sol</option>
+          <option value="bass">Fá</option>
+        </select>
+      </label>
+      <button id="scPdf" class="primary">⬇ Baixar PDF</button>
+    </div>
+    <div class="mbody" id="scBody"></div>
+    <div class="mbody fine" style="flex:none;padding-top:8px;padding-bottom:10px;border-top:1px solid var(--line)">
+      O ritmo é arredondado para fusas (1/32), em compasso 4/4. Notas simultâneas viram acordes e notas que passam da barra do compasso são ligadas.
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.5/build/cjs/vexflow.js"></script>
 <script>
 (() => {
   'use strict';
   const LOW = 48, HIGH = 84;          // C3 .. C6
-  const CELL = 28;                    // largura de 1/16
+  const CELL = 28;                    // largura de 1 passo (1/16 de compasso)
+  const ROWH = 22;                    // altura de cada linha de tom
+  const MIN_D = 0.25;                 // menor duração possível (1/64)
   const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
   const BLACK = new Set([1,3,6,8,10]);
   const PROGRAM = {soprano_sax:64, alto_sax:65, tenor_sax:66, baritone_sax:67};
   const $ = id => document.getElementById(id);
   const noteName = m => NAMES[m % 12] + (Math.floor(m / 12) - 1);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  let notes = [];                     // {p, s, d}
+  const DUR_NAMES = {
+    0.5:'fusa', 1:'semicolcheia', 1.5:'semicolcheia pontuada', 2:'colcheia', 3:'colcheia pontuada',
+    4:'semínima', 6:'semínima pontuada', 8:'mínima', 12:'mínima pontuada', 16:'semibreve', 24:'semibreve pontuada'
+  };
+  function durLabel(d){
+    const r = Math.round(d * 100) / 100;
+    if(DUR_NAMES[r]) return DUR_NAMES[r];
+    const beats = r / 4;
+    return beats.toFixed(2).replace(/\.?0+$/, '') + (beats === 1 ? ' tempo' : ' tempos');
+  }
+
+  let notes = [];                     // {p, s, d}  (s e d em passos de 1/16, podem ser fracionários)
+  let sel = null;                     // nota selecionada
+  let lastD = 4;                      // última duração editada
+  let drag = null, tapStart = null, lastTap = null, lastPreviewPitch = -1;
   let ctx = null, inst = null, instName = 'alto_sax';
   let playing = false, startedAt = 0, startStep = 0, posStep = 0, raf = 0, endTimer = 0;
+  let projName = 'Sem título';
+  let current = null;                 // {kind:'library', id} | {kind:'folder', file}
 
   const steps = () => Math.max(1, Math.min(64, +$('meas').value || 4)) * 16;
   const stepSec = () => 60 / (Math.max(30, Math.min(240, +$('bpm').value || 100))) / 4;
@@ -137,11 +302,15 @@
 
   /* ---------- áudio ---------- */
   function ensureCtx(){
-    if(!ctx){
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    if(!ctx){ ctx = new (window.AudioContext || window.webkitAudioContext)(); }
     if(ctx.state === 'suspended') ctx.resume();
     return ctx;
+  }
+  let masterGain = null;
+  function master(){
+    if(!masterGain){ masterGain = ctx.createGain(); masterGain.connect(ctx.destination); }
+    masterGain.gain.value = +$('vol').value;
+    return masterGain;
   }
   function loadInstrument(){
     if(typeof Soundfont === 'undefined'){ setStatus('Sem conexão com as amostras'); return Promise.resolve(); }
@@ -153,17 +322,11 @@
       .then(i => { inst = i; setStatus('Saxofone pronto', true); })
       .catch(() => setStatus('Falha ao carregar amostras (verifique a internet)'));
   }
-  let masterGain = null;
-  function master(){
-    if(!masterGain){ masterGain = ctx.createGain(); masterGain.connect(ctx.destination); }
-    masterGain.gain.value = +$('vol').value;
-    return masterGain;
-  }
 
-  function previewNote(m){
+  function previewNote(m, dur){
     ensureCtx();
-    if(!inst){ return; }
-    inst.play(noteName(m), ctx.currentTime, {duration: 0.7});
+    if(!inst) return;
+    inst.play(noteName(m), ctx.currentTime, {duration: dur || 0.6});
   }
 
   function play(){
@@ -180,7 +343,7 @@
       if(n.s + n.d <= startStep || n.s >= total) return;
       const from = Math.max(n.s, startStep);
       const when = t0 + (from - startStep) * ss;
-      const dur = Math.max(0.08, (Math.min(n.s + n.d, total) - from) * ss);
+      const dur = Math.max(0.05, (Math.min(n.s + n.d, total) - from) * ss);
       inst.play(noteName(n.p), when, {duration: dur, gain: 1});
     });
     playing = true;
@@ -215,67 +378,190 @@
 
   /* ---------- grade ---------- */
   function build(){
-    const g = $('grid'); g.innerHTML = '';
+    const rows = $('rows'); rows.innerHTML = '';
     const total = steps(), width = total * CELL;
-    g.style.width = (54 + width) + 'px';
+    $('grid').style.width = (54 + width) + 'px';
     for(let m = HIGH; m >= LOW; m--){
       const kind = BLACK.has(m % 12) ? 'black' : 'white';
       const row = document.createElement('div'); row.className = 'row';
       const lab = document.createElement('div');
       lab.className = 'lab ' + kind + (m % 12 === 0 ? ' c' : '');
       lab.textContent = noteName(m);
-      lab.addEventListener('click', () => previewNote(m));
+      lab.addEventListener('click', () => previewNote(m, 0.8));
       const cells = document.createElement('div');
       cells.className = 'cells ' + kind + (m % 12 === 0 ? ' c' : '');
       cells.dataset.p = m;
       cells.style.width = width + 'px';
-      // linhas verticais: semicolcheia fraca, tempo média, compasso forte
+      // linhas verticais: compasso (forte), tempo (média), passo (fraca)
       cells.style.backgroundImage =
         `linear-gradient(90deg,#d4a84355 1px,transparent 1px),` +
         `linear-gradient(90deg,#d4a84322 1px,transparent 1px),` +
         `linear-gradient(90deg,#d4a84311 1px,transparent 1px)`;
       cells.style.backgroundSize = `${CELL*16}px 100%,${CELL*4}px 100%,${CELL}px 100%`;
-      cells.addEventListener('click', e => onCell(e, m, cells));
-      row.append(lab, cells); g.append(row);
+      row.append(lab, cells); rows.append(row);
     }
-    renderNotes();
-  }
-  function renderNotes(){
-    document.querySelectorAll('.note').forEach(n => n.remove());
-    const total = steps();
-    notes = notes.filter(n => n.s < total && n.p >= LOW && n.p <= HIGH);
-    notes.forEach(n => {
-      const cells = document.querySelector(`.cells[data-p="${n.p}"]`);
-      if(!cells) return;
-      const el = document.createElement('div'); el.className = 'note';
-      el.style.left = (n.s * CELL + 1) + 'px';
-      el.style.width = (Math.min(n.d, total - n.s) * CELL - 2) + 'px';
-      cells.append(el);
-    });
-  }
-  function onCell(e, p, cells){
-    const x = e.clientX - cells.getBoundingClientRect().left;
-    const s = Math.floor(x / CELL);
-    const hit = notes.findIndex(n => n.p === p && s >= n.s && s < n.s + n.d);
-    if(hit >= 0){ notes.splice(hit, 1); }
-    else {
-      const d = Math.min(+$('len').value, steps() - s);
-      notes.push({p, s, d});
-      previewNote(p);
-    }
+    const layer = $('layer');
+    layer.style.width = width + 'px';
+    layer.style.height = ((HIGH - LOW + 1) * ROWH) + 'px';
     renderNotes();
   }
 
-  /* ---------- salvar / carregar ---------- */
-  const KEY = 'saxcrafter:project';
-  const snapshot = () => ({v:1, bpm:+$('bpm').value, measures:+$('meas').value, inst:$('inst').value, vol:+$('vol').value, notes});
+  function place(el, n){
+    el.style.left = (n.s * CELL + 1) + 'px';
+    el.style.top = ((HIGH - n.p) * ROWH + 2) + 'px';
+    el.style.width = Math.max(8, n.d * CELL - 2) + 'px';
+    el.firstChild.textContent = noteName(n.p);
+  }
+  function addNoteEl(n){
+    const el = document.createElement('div');
+    el.className = 'note'; el._n = n;
+    el.innerHTML = '<span class="nm"></span><span class="grip"></span>';
+    place(el, n);
+    $('layer').append(el);
+    return el;
+  }
+  function renderNotes(){
+    const layer = $('layer'); layer.innerHTML = '';
+    const total = steps();
+    notes = notes.filter(n => n.s < total && n.p >= LOW && n.p <= HIGH);
+    notes.forEach(n => {
+      n.d = Math.min(n.d, total - n.s);
+      const el = addNoteEl(n);
+      if(n === sel) el.classList.add('sel');
+    });
+  }
+  function select(el){
+    document.querySelectorAll('.note.sel').forEach(x => x.classList.remove('sel'));
+    if(el){ el.classList.add('sel'); sel = el._n; } else sel = null;
+  }
+  function removeNote(n){
+    notes = notes.filter(x => x !== n);
+    if(sel === n) sel = null;
+    renderNotes();
+  }
+
+  /* ---------- interação: criar, mover, redimensionar ---------- */
+  const snapStep = () => +$('snap').value || 0;
+  const snapTo = (v, free) => { const g = free ? 0 : snapStep(); return g ? Math.round(v / g) * g : v; };
+
+  function showTip(e, n){
+    const t = $('tip');
+    t.textContent = noteName(n.p) + ' · ' + durLabel(n.d);
+    t.style.display = 'block';
+    t.style.left = Math.min(window.innerWidth - 190, e.clientX + 14) + 'px';
+    t.style.top = Math.max(6, e.clientY - 38) + 'px';
+  }
+  const hideTip = () => { $('tip').style.display = 'none'; };
+
+  function createAt(e, cells, startDrag){
+    const p = +cells.dataset.p;
+    const x = e.clientX - cells.getBoundingClientRect().left;
+    const g = snapStep();
+    let s = (e.shiftKey || !g) ? x / CELL : Math.floor(x / CELL / g) * g;
+    s = Math.max(0, s);
+    const total = steps();
+    let d = $('len').value === 'last' ? lastD : +$('len').value;
+    d = Math.min(d, total - s);
+    if(d < MIN_D) return;
+    const n = {p, s, d};
+    notes.push(n);
+    const el = addNoteEl(n);
+    select(el);
+    previewNote(p);
+    if(startDrag){
+      drag = {mode:'resize', n, el, x0:e.clientX, y0:e.clientY, s0:s, p0:p, d0:d, moved:false, id:e.pointerId, created:true};
+      el.classList.add('drag');
+      document.body.classList.add('resizing');
+      showTip(e, n);
+    }
+  }
+
+  // criar numa célula vazia (mouse/caneta: arrasta para já definir a duração; toque: um toque cria)
+  $('rows').addEventListener('pointerdown', e => {
+    const cells = e.target.closest('.cells');
+    if(!cells) return;
+    if(e.pointerType === 'touch'){ tapStart = {id:e.pointerId, x:e.clientX, y:e.clientY, cells}; return; }
+    if(e.button !== 0) return;
+    e.preventDefault();
+    createAt(e, cells, true);
+  });
+
+  // pegar uma nota existente: corpo = mover, borda direita = redimensionar
+  $('layer').addEventListener('pointerdown', e => {
+    const el = e.target.closest('.note');
+    if(!el || e.button > 0) return;
+    e.preventDefault();
+    const n = el._n;
+    select(el);
+    const resize = e.target.classList.contains('grip');
+    drag = {mode: resize ? 'resize' : 'move', n, el, x0:e.clientX, y0:e.clientY, s0:n.s, p0:n.p, d0:n.d, moved:false, id:e.pointerId, created:false};
+    el.classList.add('drag');
+    document.body.classList.add(resize ? 'resizing' : 'moving');
+    lastPreviewPitch = n.p;
+    if(!resize) previewNote(n.p, 0.35);
+  });
+  $('layer').addEventListener('contextmenu', e => {
+    const el = e.target.closest('.note');
+    if(el){ e.preventDefault(); removeNote(el._n); }
+  });
+
+  window.addEventListener('pointermove', e => {
+    if(!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if(!drag.moved && Math.hypot(dx, dy) < 4) return;
+    drag.moved = true;
+    const n = drag.n, total = steps(), free = e.shiftKey;
+    if(drag.mode === 'move'){
+      n.s = clamp(snapTo(drag.s0 + dx / CELL, free), 0, total - n.d);
+      n.p = clamp(drag.p0 - Math.round(dy / ROWH), LOW, HIGH);
+      if(n.p !== lastPreviewPitch){ lastPreviewPitch = n.p; previewNote(n.p, 0.3); }
+    } else {
+      const minD = Math.max(MIN_D, free ? MIN_D : (snapStep() || MIN_D));
+      const end = snapTo(drag.s0 + drag.d0 + dx / CELL, free);
+      n.d = clamp(end - n.s, Math.min(minD, total - n.s), total - n.s);
+    }
+    place(drag.el, n);
+    showTip(e, n);
+  });
+
+  function endDrag(e, cancelled){
+    if(tapStart && e.pointerId === tapStart.id){
+      const t = tapStart; tapStart = null;
+      if(!cancelled && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 8) createAt(e, t.cells, false);
+    }
+    if(!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null;
+    d.el.classList.remove('drag');
+    document.body.classList.remove('resizing', 'moving');
+    hideTip();
+    if(d.moved){
+      if(d.mode === 'resize') lastD = d.n.d;
+    } else if(!d.created && !cancelled){
+      // toque/clique simples numa nota: duplo toque remove
+      const now = performance.now();
+      if(lastTap && lastTap.n === d.n && now - lastTap.t < 320){ lastTap = null; removeNote(d.n); }
+      else lastTap = {n: d.n, t: now};
+    }
+  }
+  window.addEventListener('pointerup', e => endDrag(e, false));
+  window.addEventListener('pointercancel', e => endDrag(e, true));
+
+  /* ---------- projeto: estado, JSON ---------- */
+  const snapshot = () => ({v:3, name:projName, bpm:+$('bpm').value, measures:+$('meas').value, inst:$('inst').value, vol:+$('vol').value, notes});
   function apply(d){
     if(!d || !Array.isArray(d.notes)) throw new Error('arquivo inválido');
     $('bpm').value = d.bpm || 100; $('meas').value = d.measures || 4; $('vol').value = d.vol ?? 0.8;
-    notes = d.notes.filter(n => Number.isFinite(n.p) && Number.isFinite(n.s) && Number.isFinite(n.d));
-    if(d.inst && d.inst !== $('inst').value){ $('inst').value = d.inst; loadInstrument(); }
+    notes = d.notes.filter(n => Number.isFinite(n.p) && Number.isFinite(n.s) && Number.isFinite(n.d) && n.d > 0);
+    sel = null;
+    if(typeof d.name === 'string' && d.name.trim()) projName = d.name.trim();
+    if(d.inst && d.inst !== $('inst').value){ $('inst').value = d.inst; if(ctx) loadInstrument(); }
     if(masterGain) masterGain.gain.value = +$('vol').value;
-    stop(); build();
+    stop(); build(); updateName();
+  }
+  function updateName(){
+    const el = $('pname');
+    el.innerHTML = 'Projeto: <b></b>';
+    el.lastChild.textContent = projName + (current ? '' : ' (não salvo)');
   }
   function download(name, blob){
     const a = document.createElement('a');
@@ -283,13 +569,224 @@
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
+  const safeName = s => (s || 'saxcrafter').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'saxcrafter';
+  const fmtDate = t => { try{ return new Date(t).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'}); }catch(e){ return ''; } };
+
+  /* ---------- armazenamento: IndexedDB (biblioteca) ---------- */
+  function idb(){
+    return new Promise((res, rej) => {
+      if(!window.indexedDB){ rej(new Error('sem IndexedDB')); return; }
+      const r = indexedDB.open('saxcrafter', 1);
+      r.onupgradeneeded = () => { const db = r.result; db.createObjectStore('projects', {keyPath:'id'}); db.createObjectStore('handles'); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idbOp(store, mode, fn){
+    const db = await idb();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, mode);
+      const rq = fn(tx.objectStore(store));
+      tx.oncomplete = () => { db.close(); res(rq && rq.result); };
+      tx.onerror = () => { db.close(); rej(tx.error); };
+      tx.onabort = () => { db.close(); rej(tx.error); };
+    });
+  }
+
+  async function saveLibrary(name){
+    name = (name || projName || 'Sem título').trim() || 'Sem título';
+    const now = Date.now(); let id;
+    if(current && current.kind === 'library') id = current.id;
+    else {
+      const all = await idbOp('projects', 'readonly', st => st.getAll());
+      const same = all.find(r => r.name === name);
+      if(same){ if(!confirm('Já existe um projeto chamado "' + name + '". Substituir?')) return false; id = same.id; }
+      else id = 'p' + now;
+    }
+    projName = name;
+    await idbOp('projects', 'readwrite', st => st.put({id, name, updated: now, data: snapshot()}));
+    current = {kind:'library', id};
+    updateName();
+    return true;
+  }
+
+  function projLi(title, meta, onOpen, onDel){
+    const li = document.createElement('li');
+    const t = document.createElement('div'); t.className = 't';
+    const b = document.createElement('b'); b.textContent = title;
+    const s = document.createElement('small'); s.textContent = meta;
+    t.append(b, s);
+    const o = document.createElement('button'); o.textContent = 'Abrir'; o.onclick = onOpen;
+    const x = document.createElement('button'); x.textContent = 'Excluir'; x.onclick = onDel;
+    li.append(t, o, x);
+    return li;
+  }
+  function emptyLi(text){ const li = document.createElement('li'); li.className = 'empty'; li.textContent = text; return li; }
+
+  async function refreshLib(){
+    const ul = $('libList'); ul.innerHTML = '';
+    let rows;
+    try{ rows = await idbOp('projects', 'readonly', st => st.getAll()); }
+    catch(e){ ul.append(emptyLi('A biblioteca não está disponível neste navegador (modo privado?)')); return; }
+    rows.sort((a, b) => b.updated - a.updated);
+    if(!rows.length){ ul.append(emptyLi('Nenhum projeto salvo ainda')); return; }
+    rows.forEach(r => ul.append(projLi(
+      r.name,
+      ((r.data && r.data.notes) ? r.data.notes.length : 0) + ' notas · ' + fmtDate(r.updated),
+      () => { try{ apply(r.data); projName = r.name; current = {kind:'library', id:r.id}; updateName(); $('projNameIn').value = projName; closeModals(); setStatus('Projeto aberto', true); }catch(e){ setStatus('Projeto inválido'); } },
+      async () => { if(!confirm('Excluir "' + r.name + '" da biblioteca?')) return;
+        await idbOp('projects', 'readwrite', st => st.delete(r.id));
+        if(current && current.kind === 'library' && current.id === r.id){ current = null; updateName(); }
+        refreshLib(); }
+    )));
+  }
+
+  /* ---------- armazenamento: pasta do dispositivo (File System Access API) ---------- */
+  const FS_OK = typeof window.showDirectoryPicker === 'function';
+  let dirHandle = null;
+  const FOLDER_EXT = '.saxcrafter.json';
+
+  async function folderPerm(interactive){
+    if(!dirHandle) return false;
+    const opts = {mode:'readwrite'};
+    try{
+      let p = await dirHandle.queryPermission(opts);
+      if(p !== 'granted' && interactive) p = await dirHandle.requestPermission(opts);
+      return p === 'granted';
+    }catch(e){ return false; }
+  }
+  async function loadStoredFolder(){
+    if(!FS_OK) return;
+    try{ dirHandle = await idbOp('handles', 'readonly', st => st.get('dir')) || null; }catch(e){ dirHandle = null; }
+  }
+  async function pickFolder(){
+    try{
+      const h = await window.showDirectoryPicker({id:'saxcrafter', mode:'readwrite'});
+      dirHandle = h;
+      try{ await idbOp('handles', 'readwrite', st => st.put(h, 'dir')); }catch(e){}
+      await refreshFolder();
+    }catch(e){ if(e && e.name !== 'AbortError') setStatus('Não foi possível abrir a pasta'); }
+  }
+  async function refreshFolder(){
+    const ul = $('folderList'); ul.innerHTML = '';
+    $('reconnect').hidden = true;
+    $('saveFolder').disabled = !dirHandle;
+    $('folderName').textContent = dirHandle ? dirHandle.name : 'nenhuma';
+    if(!FS_OK) return;
+    if(!dirHandle){ ul.append(emptyLi('Escolha uma pasta para guardar e abrir seus projetos')); return; }
+    if(!(await folderPerm(false))){
+      ul.append(emptyLi('O navegador pede permissão para acessar a pasta novamente'));
+      $('reconnect').hidden = false;
+      return;
+    }
+    const items = [];
+    try{
+      for await (const [name, h] of dirHandle.entries()){
+        if(h.kind === 'file' && name.toLowerCase().endsWith(FOLDER_EXT)){
+          let mod = 0, size = 0;
+          try{ const f = await h.getFile(); mod = f.lastModified; size = f.size; }catch(e){}
+          items.push({name, h, mod, size});
+          if(items.length >= 300) break;
+        }
+      }
+    }catch(e){ ul.append(emptyLi('Não foi possível ler a pasta')); return; }
+    items.sort((a, b) => b.mod - a.mod);
+    if(!items.length){ ul.append(emptyLi('Nenhum projeto do Saxcrafter nesta pasta ainda')); return; }
+    items.forEach(it => ul.append(projLi(
+      it.name.slice(0, -FOLDER_EXT.length),
+      fmtDate(it.mod) + ' · ' + Math.max(1, Math.round(it.size / 1024)) + ' KB',
+      async () => {
+        try{
+          const f = await it.h.getFile();
+          apply(JSON.parse(await f.text()));
+          if(!/\S/.test(snapshot().name) || projName === 'Sem título') projName = it.name.slice(0, -FOLDER_EXT.length);
+          current = {kind:'folder', file: it.name}; updateName(); $('projNameIn').value = projName;
+          closeModals(); setStatus('Projeto aberto da pasta', true);
+        }catch(e){ setStatus('Arquivo inválido'); }
+      },
+      async () => {
+        if(!confirm('Excluir "' + it.name + '" da pasta?')) return;
+        try{ await dirHandle.removeEntry(it.name); }catch(e){ setStatus('Não foi possível excluir'); }
+        if(current && current.kind === 'folder' && current.file === it.name){ current = null; updateName(); }
+        refreshFolder();
+      }
+    )));
+  }
+  async function saveFolder(name, keepFile){
+    if(!dirHandle){ setStatus('Escolha uma pasta primeiro'); return false; }
+    if(!(await folderPerm(true))){ setStatus('Permissão da pasta negada'); return false; }
+    name = (name || projName || 'Sem título').trim() || 'Sem título';
+    const file = keepFile || (safeName(name) + FOLDER_EXT);
+    if(!keepFile){
+      let exists = true;
+      try{ await dirHandle.getFileHandle(file); }catch(e){ exists = false; }
+      if(exists && !confirm('O arquivo "' + file + '" já existe nesta pasta. Substituir?')) return false;
+    }
+    projName = name;
+    const fh = await dirHandle.getFileHandle(file, {create:true});
+    const w = await fh.createWritable();
+    await w.write(new Blob([JSON.stringify(snapshot(), null, 2)], {type:'application/json'}));
+    await w.close();
+    current = {kind:'folder', file};
+    updateName();
+    return true;
+  }
+
+  async function quickSave(){
+    try{
+      if(current && current.kind === 'library'){ if(await saveLibrary(projName)) setStatus('Salvo na biblioteca', true); }
+      else if(current && current.kind === 'folder' && dirHandle){ if(await saveFolder(projName, current.file)) setStatus('Salvo na pasta', true); }
+      else openProjects();
+    }catch(e){ setStatus('Não foi possível salvar'); }
+  }
+
+  /* ---------- janelas ---------- */
+  const modalOpen = () => !!document.querySelector('.modal:not([hidden])');
+  function openModal(id){ $(id).hidden = false; document.body.style.overflow = 'hidden'; }
+  function closeModals(){ document.querySelectorAll('.modal').forEach(m => m.hidden = true); document.body.style.overflow = ''; }
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModals);
+  document.querySelectorAll('.modal').forEach(m => m.addEventListener('pointerdown', e => { if(e.target === m) closeModals(); }));
+
+  async function openProjects(){
+    $('projNameIn').value = projName === 'Sem título' && !current ? '' : projName;
+    openModal('mProj');
+    $('folderSec').querySelector('#folderNote').textContent = FS_OK ? '' :
+      'Este navegador não permite escolher uma pasta (isso funciona no Chrome e no Edge). Use a biblioteca do aplicativo ou os botões JSON/Importar.';
+    $('pickFolder').disabled = !FS_OK; $('saveFolder').disabled = true;
+    refreshLib();
+    await loadStoredFolder();
+    refreshFolder();
+  }
+  $('projects').onclick = openProjects;
+  $('pname').onclick = openProjects;
+  $('save').onclick = quickSave;
+  $('saveLib').onclick = async () => {
+    try{
+      const nm = $('projNameIn').value.trim() || 'Sem título';
+      // nome diferente do atual: salva como novo projeto
+      if(current && current.kind === 'library' && nm !== projName) current = null;
+      if(await saveLibrary(nm)){ setStatus('Salvo na biblioteca', true); refreshLib(); }
+    }catch(e){ setStatus('Não foi possível salvar na biblioteca'); }
+  };
+  $('pickFolder').onclick = pickFolder;
+  $('reconnect').onclick = async () => { if(await folderPerm(true)) refreshFolder(); else setStatus('Permissão da pasta negada'); };
+  $('saveFolder').onclick = async () => {
+    try{
+      const nm = $('projNameIn').value.trim() || 'Sem título';
+      const keep = current && current.kind === 'folder' && nm === projName ? current.file : undefined;
+      if(await saveFolder(nm, keep)){ setStatus('Salvo na pasta', true); refreshFolder(); }
+    }catch(e){ setStatus('Não foi possível salvar na pasta'); }
+  };
 
   /* ---------- exportar MIDI ---------- */
   function vlq(n){ const b = [n & 0x7f]; while((n >>= 7)) b.unshift((n & 0x7f) | 0x80); return b; }
   function midiBlob(){
-    const TPS = 120; // ticks por semicolcheia (480 por semínima)
+    const TPS = 120; // ticks por passo de 1/16 (480 por semínima)
     const ev = [];
-    notes.forEach(n => { ev.push([n.s * TPS, 1, n.p]); ev.push([(n.s + n.d) * TPS, 0, n.p]); });
+    notes.forEach(n => {
+      const a = Math.round(n.s * TPS), b = Math.max(a + 1, Math.round((n.s + n.d) * TPS));
+      ev.push([a, 1, n.p]); ev.push([b, 0, n.p]);
+    });
     ev.sort((a,b) => a[0] - b[0] || a[1] - b[1]);
     const mpq = Math.round(60000000 / (+$('bpm').value || 100));
     const tr = [0,0xff,0x51,3,(mpq>>16)&255,(mpq>>8)&255,mpq&255, 0,0xc0,PROGRAM[$('inst').value]];
@@ -328,14 +825,333 @@
       const off = new OfflineAudioContext(2, Math.ceil(end * sr), sr);
       const g = off.createGain(); g.gain.value = +$('vol').value; g.connect(off.destination);
       const i = await Soundfont.instrument(off, $('inst').value, {soundfont:'MusyngKite', gain:2, destination:g});
-      notes.forEach(n => i.play(noteName(n.p), n.s * ss, {duration: n.d * ss, gain: 1}));
+      notes.forEach(n => i.play(noteName(n.p), n.s * ss, {duration: Math.max(0.05, n.d * ss), gain: 1}));
       const rendered = await off.startRendering();
-      download('saxcrafter.wav', wavBlob(rendered));
+      download(safeName(projName) + '.wav', wavBlob(rendered));
     }catch(e){ setStatus('Não foi possível gerar o WAV'); }
     $('loading').style.display = 'none';
   }
 
-  /* ---------- eventos ---------- */
+  /* ---------- partitura (notação) ---------- */
+  const TRANSPOSE = {soprano_sax:2, alto_sax:9, tenor_sax:14, baritone_sax:21};   // semitons: som -> escrita
+  const INST_LABEL = {soprano_sax:'Sax soprano', alto_sax:'Sax alto', tenor_sax:'Sax tenor', baritone_sax:'Sax barítono'};
+  const KEY_NAME = ['c','c#','d','d#','e','f','f#','g','g#','a','a#','b'];
+  const KEY_LETTER = ['c','c','d','d','e','f','f','g','g','a','a','b'];
+  const KEY_SHARP = [0,1,0,1,0,0,1,0,1,0,1,0];
+  const DURS = [32,24,16,12,8,6,4,3,2,1];                 // em fusas (1/32)
+  const DUR_VF = {32:['w',0], 24:['h',1], 16:['h',0], 12:['q',1], 8:['q',0], 6:['8',1], 4:['8',0], 3:['16',1], 2:['16',0], 1:['32',0]};
+  const vfKey = m => KEY_NAME[m % 12] + '/' + (Math.floor(m / 12) - 1);
+
+  // posição permitida para cada valor dentro do compasso 4/4 (32 fusas)
+  function okPos(pos, d){
+    switch(d){
+      case 32: case 24: return pos === 0;
+      case 16: return pos % 16 === 0;
+      case 12: return pos === 0 || pos === 16;
+      case 8:  return pos % 8 === 0;
+      case 6:  return pos % 8 === 0;
+      case 4:  return pos % 4 === 0;
+      case 3:  return pos % 4 === 0;
+      case 2:  return pos % 2 === 0;
+      default: return true;
+    }
+  }
+  function splitDur(pos, len){
+    const out = [];
+    while(len > 0){
+      for(const d of DURS){
+        if(d <= len && okPos(pos, d)){ out.push(d); pos += d; len -= d; break; }
+      }
+    }
+    return out;
+  }
+
+  // fatia a melodia em segmentos onde o conjunto de notas soando não muda
+  function scoreSegments(){
+    const total = steps() * 2;                               // 1 passo = 2 fusas
+    const items = notes.map(n => {
+      let u = Math.round(n.s * 2), e = Math.round((n.s + n.d) * 2);
+      u = clamp(u, 0, total - 1); e = clamp(e, u + 1, total);
+      return {p:n.p, u, e};
+    });
+    const cuts = new Set([0, total]);
+    for(let m = 32; m < total; m += 32) cuts.add(m);
+    items.forEach(i => { cuts.add(i.u); cuts.add(i.e); });
+    const pts = [...cuts].sort((a, b) => a - b);
+    const segs = [];
+    for(let k = 0; k < pts.length - 1; k++){
+      const a = pts[k], b = pts[k + 1];
+      segs.push({a, b, act: items.filter(i => i.u <= a && i.e >= b)});
+    }
+    return segs;
+  }
+
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function svgText(svg, txt, x, y, size, opts){
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('font-family', "Georgia, 'Times New Roman', serif");
+    t.setAttribute('font-size', size);
+    t.setAttribute('fill', '#111');
+    if(opts && opts.bold) t.setAttribute('font-weight', 'bold');
+    if(opts && opts.italic) t.setAttribute('font-style', 'italic');
+    if(opts && opts.anchor) t.setAttribute('text-anchor', opts.anchor);
+    t.textContent = txt;
+    svg.appendChild(t);
+  }
+
+  function buildScore(opts){
+    const VF = window.Vex && window.Vex.Flow;
+    if(!VF) throw new Error('vexflow');
+    const {Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Beam, Dot, StaveTie, Barline} = VF;
+    const semis = opts.mode === 'sax' ? (TRANSPOSE[$('inst').value] || 0) : 0;
+    const nMeas = steps() / 16;
+
+    // 1) peças (notas/acordes/pausas) já divididas em valores de figura padrão
+    const measures = Array.from({length:nMeas}, () => []);
+    const all = [];
+    scoreSegments().forEach(seg => {
+      const parts = splitDur(seg.a % 32, seg.b - seg.a);
+      const pm = new Map();
+      seg.act.forEach(i => {
+        const o = pm.get(i.p) || {p:i.p, cont:false, from:false};
+        if(i.e > seg.b) o.cont = true;
+        if(i.u < seg.a) o.from = true;
+        pm.set(i.p, o);
+      });
+      const plist = [...pm.values()].sort((x, y) => x.p - y.p);
+      let pos = seg.a;
+      parts.forEach((d, k) => {
+        const first = k === 0, last = k === parts.length - 1;
+        const piece = {start:pos, d, rest:!plist.length,
+          pitches: plist.map(x => ({p:x.p, wp:x.p + semis, tieIn: first ? x.from : true, tieOut: last ? x.cont : true}))};
+        measures[Math.floor(pos / 32)].push(piece);
+        all.push(piece);
+        pos += d;
+      });
+    });
+
+    // 2) clave
+    let clef = opts.clef;
+    if(clef === 'auto'){
+      const ws = all.filter(p => !p.rest).flatMap(p => p.pitches.map(x => x.wp)).sort((a, b) => a - b);
+      const med = ws.length ? ws[Math.floor(ws.length / 2)] : 66;
+      clef = med < 55 ? 'bass' : 'treble';
+    }
+    const restKey = clef === 'bass' ? 'd/3' : 'b/4';
+
+    // 3) notas do VexFlow (com acidentes por compasso)
+    measures.forEach(mp => {
+      const state = {};
+      mp.forEach(pc => {
+        const [dn, dots] = DUR_VF[pc.d];
+        const keys = pc.rest ? [restKey] : pc.pitches.map(x => vfKey(x.wp));
+        const o = {keys, duration: dn + (dots ? 'd' : '') + (pc.rest ? 'r' : ''), clef, auto_stem:true};
+        if(pc.rest && pc.d === 32) o.align_center = true;
+        const note = new StaveNote(o);
+        if(dots) Dot.buildAndAttach([note], {all:true});
+        if(!pc.rest){
+          pc.pitches.forEach((x, i) => {
+            const id = KEY_LETTER[x.wp % 12] + Math.floor(x.wp / 12);
+            const acc = KEY_SHARP[x.wp % 12] ? '#' : '';
+            const cur = state[id] || '';
+            if(!x.tieIn && acc !== cur) note.addModifier(new Accidental(acc ? '#' : 'n'), i);
+            state[id] = acc;
+          });
+        }
+        pc.note = note;
+      });
+    });
+
+    // 4) larguras mínimas e vigas
+    const mdata = measures.map(mp => {
+      const tick = mp.map(p => p.note);
+      const voice = new Voice({num_beats:4, beat_value:4}).setMode(Voice.Mode.SOFT).addTickables(tick);
+      const minW = new Formatter().joinVoices([voice]).preCalculateMinTotalWidth([voice]);
+      const beams = Beam.generateBeams(tick);
+      return {voice, minW, beams};
+    });
+
+    // 5) sistemas (linhas) e páginas
+    const W = 794, H = 1123, ML = 40, usable = W - 2 * ML;
+    const baseW = m => Math.max(110, m.minW * 1.15 + 36);
+    const systems = []; let cur = [], sum = 0;
+    mdata.forEach((m, mi) => {
+      let w = baseW(m) + (cur.length ? 0 : 45) + (mi === 0 ? 32 : 0);
+      if(cur.length && sum + w > usable){ systems.push(cur); cur = []; sum = 0; w = baseW(m) + 45; }
+      cur.push({mi, w}); sum += w;
+    });
+    if(cur.length) systems.push(cur);
+
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none';
+    document.body.appendChild(host);
+    const pages = [];
+    const newPage = () => {
+      const div = document.createElement('div'); host.appendChild(div);
+      const r = new Renderer(div, Renderer.Backends.SVG); r.resize(W, H);
+      const svg = div.querySelector('svg');
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      const bg = document.createElementNS(SVGNS, 'rect');
+      bg.setAttribute('x', 0); bg.setAttribute('y', 0); bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', '#fff');
+      svg.insertBefore(bg, svg.firstChild);
+      const page = {svg, ctx: r.getContext()};
+      pages.push(page);
+      return page;
+    };
+    let page = newPage(), y = 135;
+    svgText(page.svg, opts.title || 'Sem título', W / 2, 62, 28, {bold:true, anchor:'middle'});
+    svgText(page.svg, (INST_LABEL[$('inst').value] || 'Saxofone') + (semis ? ' · escrita transposta' : ' · em dó (som real)'),
+            W / 2, 86, 13, {italic:true, anchor:'middle'});
+
+    const loc = new Map();
+    const SYS_H = 160;
+    systems.forEach((sys, si) => {
+      if(y + SYS_H > H - 40){ page = newPage(); y = 40; }
+      const isLast = si === systems.length - 1;
+      const sumW = sys.reduce((a, b) => a + b.w, 0);
+      const factor = isLast ? Math.min(usable / sumW, 1.4) : usable / sumW;
+      let x = ML;
+      sys.forEach((it, k) => {
+        const m = mdata[it.mi];
+        const width = Math.round(it.w * factor);
+        const stave = new Stave(x, y, width);
+        if(k === 0) stave.addClef(clef);
+        if(it.mi === 0){
+          stave.addTimeSignature('4/4');
+          stave.setTempo({duration:'q', dots:0, bpm:Math.max(30, Math.min(240, +$('bpm').value || 100))}, -27);
+        }
+        if(it.mi === mdata.length - 1) stave.setEndBarType(Barline.type.END);
+        stave.setContext(page.ctx).draw();
+        const fw = Math.max(30, stave.getNoteEndX() - stave.getNoteStartX() - 14);
+        new Formatter().joinVoices([m.voice]).format([m.voice], fw);
+        m.voice.draw(page.ctx, stave);
+        m.beams.forEach(b => b.setContext(page.ctx).draw());
+        measures[it.mi].forEach(pc => loc.set(pc.note, {page, sys:si}));
+        x += width;
+      });
+      y += SYS_H;
+    });
+
+    // 6) ligaduras de prolongamento (inclusive entre linhas e páginas)
+    for(let i = 0; i < all.length - 1; i++){
+      const A = all[i], B = all[i + 1];
+      if(A.rest || B.rest) continue;
+      A.pitches.forEach((x, ai) => {
+        if(!x.tieOut) return;
+        const bi = B.pitches.findIndex(z => z.p === x.p && z.tieIn);
+        if(bi < 0) return;
+        const la = loc.get(A.note), lb = loc.get(B.note);
+        if(!la || !lb) return;
+        if(la.sys === lb.sys){
+          new StaveTie({first_note:A.note, last_note:B.note, first_indices:[ai], last_indices:[bi]}).setContext(la.page.ctx).draw();
+        } else {
+          new StaveTie({first_note:A.note, last_note:null, first_indices:[ai], last_indices:[ai]}).setContext(la.page.ctx).draw();
+          new StaveTie({first_note:null, last_note:B.note, first_indices:[bi], last_indices:[bi]}).setContext(lb.page.ctx).draw();
+        }
+      });
+    }
+
+    pages.forEach((pg, i) => svgText(pg.svg, (i + 1) + ' / ' + pages.length, W / 2, H - 22, 11, {anchor:'middle'}));
+    const svgs = pages.map(pg => { pg.svg.remove(); return pg.svg; });
+    host.remove();
+    return {svgs, W, H};
+  }
+
+  /* ---------- PDF (páginas A4 em imagem de alta resolução) ---------- */
+  async function svgToJpeg(svg, W, H, scale){
+    const c = svg.cloneNode(true);
+    c.setAttribute('xmlns', SVGNS);
+    c.setAttribute('width', W); c.setAttribute('height', H);
+    c.removeAttribute('style');
+    const xml = new XMLSerializer().serializeToString(c);
+    const url = URL.createObjectURL(new Blob([xml], {type:'image/svg+xml;charset=utf-8'}));
+    try{
+      const img = new Image();
+      await new Promise((ok, err) => { img.onload = ok; img.onerror = err; img.src = url; });
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
+      const g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+      g.drawImage(img, 0, 0, cv.width, cv.height);
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.93));
+      return {w:cv.width, h:cv.height, bytes:new Uint8Array(await blob.arrayBuffer())};
+    } finally { URL.revokeObjectURL(url); }
+  }
+  function makePdf(pages){
+    const enc = new TextEncoder(), chunks = [], offs = [];
+    let len = 0;
+    const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; chunks.push(b); len += b.length; };
+    const PW = 595.28, PH = 841.89, N = pages.length, count = 3 + 3 * N;
+    push('%PDF-1.4\n'); push(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
+    offs[1] = len; push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    offs[2] = len;
+    push('2 0 obj\n<< /Type /Pages /Count ' + N + ' /Kids [' + pages.map((_, i) => (3 + 3 * i) + ' 0 R').join(' ') + '] >>\nendobj\n');
+    pages.forEach((pg, i) => {
+      const po = 3 + 3 * i, co = po + 1, io = po + 2;
+      offs[po] = len;
+      push(po + ' 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /XObject << /Im0 ' + io + ' 0 R >> >> /Contents ' + co + ' 0 R >>\nendobj\n');
+      const cs = 'q ' + PW + ' 0 0 ' + PH + ' 0 0 cm /Im0 Do Q';
+      offs[co] = len;
+      push(co + ' 0 obj\n<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream\nendobj\n');
+      offs[io] = len;
+      push(io + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + pg.w + ' /Height ' + pg.h +
+           ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + pg.bytes.length + ' >>\nstream\n');
+      push(pg.bytes);
+      push('\nendstream\nendobj\n');
+    });
+    const xref = len;
+    let x = 'xref\n0 ' + count + '\n0000000000 65535 f \n';
+    for(let i = 1; i < count; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+    push(x + 'trailer\n<< /Size ' + count + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+    return new Blob(chunks, {type:'application/pdf'});
+  }
+
+  /* ---------- janela da partitura ---------- */
+  let scoreData = null, scTimer = 0;
+  function scoreOpts(){ return {title:$('scTitle').value.trim(), mode:$('scMode').value, clef:$('scClef').value}; }
+  function renderScoreModal(){
+    const body = $('scBody'); body.innerHTML = ''; scoreData = null;
+    $('scPdf').disabled = true;
+    const msg = t => { const d = document.createElement('div'); d.className = 'msg'; d.textContent = t; body.append(d); };
+    if(!notes.length){ msg('Crie uma melodia na grade e volte aqui para ver a partitura.'); return; }
+    if(!(window.Vex && window.Vex.Flow)){ msg('A biblioteca de partituras não carregou. Verifique a conexão com a internet e recarregue a página.'); return; }
+    try{
+      scoreData = buildScore(scoreOpts());
+      scoreData.svgs.forEach(svg => {
+        const p = document.createElement('div'); p.className = 'paper';
+        svg.removeAttribute('width'); svg.removeAttribute('height');
+        p.append(svg); body.append(p);
+      });
+      $('scPdf').disabled = false;
+    }catch(e){
+      console.error(e);
+      msg('Não foi possível montar a partitura desta melodia.');
+    }
+  }
+  function openScore(){
+    $('scTitle').value = projName === 'Sem título' ? '' : projName;
+    openModal('mScore');
+    renderScoreModal();
+  }
+  $('score').onclick = openScore;
+  $('scMode').onchange = renderScoreModal;
+  $('scClef').onchange = renderScoreModal;
+  $('scTitle').oninput = () => { clearTimeout(scTimer); scTimer = setTimeout(renderScoreModal, 450); };
+  $('scPdf').onclick = async () => {
+    if(!scoreData) return;
+    $('loading').style.display = 'flex';
+    try{
+      const pgs = [];
+      for(const svg of scoreData.svgs) pgs.push(await svgToJpeg(svg, scoreData.W, scoreData.H, 3));
+      const title = $('scTitle').value.trim() || projName;
+      download(safeName(title) + '.pdf', makePdf(pgs));
+      setStatus('Partitura exportada em PDF', true);
+    }catch(e){ console.error(e); setStatus('Não foi possível gerar o PDF'); }
+    $('loading').style.display = 'none';
+  };
+
+  /* ---------- eventos da barra ---------- */
   $('play').onclick = play;
   $('pause').onclick = pause;
   $('stop').onclick = stop;
@@ -343,33 +1159,74 @@
   $('vol').oninput = () => { if(masterGain) masterGain.gain.value = +$('vol').value; };
   $('bpm').onchange = () => { if(playing){ const p = posStep; stopSound(); posStep = p; play(); } };
   $('meas').onchange = () => { stop(); build(); };
-  $('save').onclick = () => { localStorage.setItem(KEY, JSON.stringify(snapshot())); setStatus('Projeto salvo', true); };
-  $('load').onclick = () => {
-    const raw = localStorage.getItem(KEY);
-    if(!raw){ setStatus('Nada salvo ainda'); return; }
-    try{ apply(JSON.parse(raw)); setStatus('Projeto carregado', true); }catch(e){ setStatus('Projeto salvo está corrompido'); }
-  };
-  $('clear').onclick = () => { if(!notes.length || confirm('Apagar todas as notas?')){ notes = []; renderNotes(); } };
-  $('exJson').onclick = () => download('saxcrafter.json', new Blob([JSON.stringify(snapshot(), null, 2)], {type:'application/json'}));
+  $('clear').onclick = () => { if(!notes.length || confirm('Apagar todas as notas?')){ notes = []; sel = null; renderNotes(); } };
+  $('exJson').onclick = () => download(safeName(projName) + '.saxcrafter.json', new Blob([JSON.stringify(snapshot(), null, 2)], {type:'application/json'}));
   $('imJson').onclick = () => $('file').click();
   $('file').onchange = async e => {
     const f = e.target.files[0]; if(!f) return;
-    try{ apply(JSON.parse(await f.text())); setStatus('Arquivo importado', true); }catch(err){ setStatus('Arquivo inválido'); }
+    try{
+      apply(JSON.parse(await f.text()));
+      current = null; updateName();
+      setStatus('Arquivo importado', true);
+    }catch(err){ setStatus('Arquivo inválido'); }
     e.target.value = '';
   };
-  $('exMidi').onclick = () => notes.length ? download('saxcrafter.mid', midiBlob()) : setStatus('Adicione notas antes de exportar');
+  $('exMidi').onclick = () => notes.length ? download(safeName(projName) + '.mid', midiBlob()) : setStatus('Adicione notas antes de exportar');
   $('exWav').onclick = exportWav;
+
+  /* ---------- teclado ---------- */
   document.addEventListener('keydown', e => {
-    if(e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){
-      e.preventDefault(); playing ? pause() : play();
+    if(e.key === 'Escape' && modalOpen()){ closeModals(); return; }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); if(!modalOpen()) quickSave(); return; }
+    if(modalOpen()) return;
+    const tag = document.activeElement.tagName;
+    const typing = /INPUT|SELECT|TEXTAREA/.test(tag);
+    if(e.code === 'Space' && !typing && tag !== 'BUTTON'){
+      e.preventDefault(); playing ? pause() : play(); return;
     }
+    if(typing || !sel) return;
+    const total = steps();
+    let handled = true;
+    switch(e.key){
+      case 'Delete': case 'Backspace': removeNote(sel); break;
+      case 'ArrowUp':    sel.p = clamp(sel.p + (e.shiftKey ? 12 : 1), LOW, HIGH); previewNote(sel.p, 0.3); renderNotes(); break;
+      case 'ArrowDown':  sel.p = clamp(sel.p - (e.shiftKey ? 12 : 1), LOW, HIGH); previewNote(sel.p, 0.3); renderNotes(); break;
+      case 'ArrowLeft':  sel.s = clamp(sel.s - (snapStep() || MIN_D), 0, total - sel.d); renderNotes(); break;
+      case 'ArrowRight': sel.s = clamp(sel.s + (snapStep() || MIN_D), 0, total - sel.d); renderNotes(); break;
+      case 'Escape': select(null); break;
+      default: handled = false;
+    }
+    if(handled) e.preventDefault();
   });
+
   // navegadores só liberam áudio após um gesto do usuário
   const first = () => { ensureCtx(); if(!inst) loadInstrument(); document.removeEventListener('pointerdown', first); };
   document.addEventListener('pointerdown', first);
 
+  /* ---------- rascunho automático (volta de onde você parou) ---------- */
+  const AUTO_KEY = 'saxcrafter:auto';
+  let lastAuto = '';
+  try{
+    const raw = localStorage.getItem(AUTO_KEY);
+    if(raw){ const d = JSON.parse(raw); if(d && Array.isArray(d.notes) && d.notes.length){ apply(d); lastAuto = raw; } }
+  }catch(e){}
+  setInterval(() => {
+    try{
+      const s = JSON.stringify(snapshot());
+      if(s !== lastAuto){ localStorage.setItem(AUTO_KEY, s); lastAuto = s; }
+    }catch(e){}
+  }, 1500);
+
   build();
+  updateName();
+  $('wrap').scrollTop = (HIGH - 81) * ROWH;   // começa por volta do Sol5, onde o sax soa mais à vontade
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // ganchos para teste automatizado
+  window.__sax = {
+    setNotes(arr, measures, inst){ notes = arr; if(measures) $('meas').value = measures; if(inst) $('inst').value = inst; build(); },
+    buildScore, makePdf, steps
+  };
 })();
 </script>
 </body>

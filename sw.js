@@ -1,4 +1,4 @@
-const CACHE = 'saxcrafter-v1';
+const CACHE = 'saxcrafter-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
