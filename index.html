@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Saxcrafter</title>
 <meta name="theme-color" content="#0d0a07">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Saxcrafter">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root{
     --bg:#0d0a07; --panel:#17110b; --panel2:#21170d; --line:#3a2a14;
@@ -15,8 +19,8 @@
     --black-key:#120d08; --white-key:#1b140c; --c-row:#2a1e0f;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  body{display:flex;flex-direction:column;background:radial-gradient(1200px 500px at 50% -10%,#2a1c0a 0%,var(--bg) 60%)}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:radial-gradient(1200px 500px at 50% -10%,#2a1c0a 0%,var(--bg) 60%)}
   header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
   header svg{width:34px;height:34px;flex:none}
   h1{font-size:20px;margin:0;letter-spacing:.5px;color:var(--gold);font-weight:700}
@@ -42,8 +46,8 @@
   input[type=range]{accent-color:var(--amber);width:110px}
   #status{margin-left:auto;font-size:12px;color:var(--muted)}
   #status.ok{color:var(--amber)}
-  main{flex:1;min-height:0;display:flex;padding:12px 16px 8px}
-  #wrap{position:relative;flex:1;min-width:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+  main{flex:1;min-height:min(440px,62vh);display:flex;padding:12px 16px 16px}
+  #wrap{position:relative;flex:1;min-width:0;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);
         -webkit-user-select:none;user-select:none;overscroll-behavior:contain}
   #grid{position:relative}
   #rows{position:relative}
@@ -77,9 +81,12 @@
   #playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);z-index:4;pointer-events:none;display:none}
   #tip{position:fixed;z-index:60;pointer-events:none;display:none;background:#0d0a07ee;border:1px solid var(--gold);
        color:var(--amber);padding:4px 9px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
-  .help{font-size:12px;color:var(--muted);padding:6px 16px 14px;line-height:1.55}
-  .help b{color:var(--gold)}
-  .help kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px;color:var(--text)}
+  .adv{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;width:100%;padding-top:10px;border-top:1px solid var(--line)}
+  .adv[hidden]{display:none}
+  ul.how{margin:0;padding-left:18px;font-size:14px;line-height:1.55}
+  ul.how li{margin-bottom:8px}
+  ul.how b{color:var(--gold)}
+  ul.how kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:12px;color:var(--text)}
   #loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0d0a07cc;z-index:80;color:var(--gold)}
 
   /* janelas (Projetos e Partitura) */
@@ -112,7 +119,20 @@
   .paper{background:#fff;margin:0 auto 16px;max-width:794px;box-shadow:0 4px 18px #0009}
   .paper svg{display:block;width:100%;height:auto}
   .msg{color:var(--text);padding:30px 10px;text-align:center;font-size:14px}
-  @media (max-width:600px){ input[type=range]{width:80px} #pname{max-width:100%;margin-left:0} header{flex-wrap:wrap} }
+  @media (max-width:700px){
+    header{padding:8px 12px;gap:8px;flex-wrap:nowrap}
+    header svg{width:28px;height:28px}
+    h1{font-size:17px;white-space:nowrap}
+    h1 small{display:none}
+    #pname{flex:1;max-width:none;min-width:0;font-size:12px;padding:5px 8px;text-align:right}
+    .toolbar{padding:8px 12px;gap:8px}
+    .group{gap:5px}
+    button,select,input[type=number],input[type=text]{padding:7px 10px}
+    .lbl{display:none}
+    input[type=range]{width:80px}
+    main{padding:8px 8px 12px}
+    .adv{gap:8px 10px}
+  }
 </style>
 </head>
 <body>
@@ -129,53 +149,60 @@
 
 <div class="toolbar">
   <div class="group">
-    <button id="play" class="primary">▶ Tocar</button>
-    <button id="pause">⏸ Pausar</button>
-    <button id="stop">⏹ Parar</button>
-  </div>
-  <div class="group"><label for="inst">Sax</label>
-    <select id="inst">
-      <option value="alto_sax">Alto</option>
-      <option value="tenor_sax">Tenor</option>
-      <option value="soprano_sax">Soprano</option>
-      <option value="baritone_sax">Barítono</option>
-    </select>
-  </div>
-  <div class="group"><label for="bpm">BPM</label><input id="bpm" type="number" min="30" max="240" value="100"></div>
-  <div class="group"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></div>
-  <div class="group"><label for="meas">Compassos</label><input id="meas" type="number" min="1" max="64" value="4"></div>
-  <div class="group"><label for="len">Nova nota</label>
-    <select id="len">
-      <option value="last">Última editada</option>
-      <option value="1">Semicolcheia</option>
-      <option value="2">Colcheia</option>
-      <option value="4" selected>Semínima</option>
-      <option value="8">Mínima</option>
-      <option value="16">Semibreve</option>
-    </select>
-  </div>
-  <div class="group"><label for="snap">Ímã</label>
-    <select id="snap" title="Alinhamento ao arrastar (segure Shift para ignorar)">
-      <option value="0">Livre</option>
-      <option value="0.5">1/32</option>
-      <option value="1" selected>1/16</option>
-      <option value="2">1/8</option>
-      <option value="4">1/4</option>
-    </select>
+    <button id="play" class="primary" aria-label="Tocar">▶ Tocar</button>
+    <button id="pause" title="Pausar" aria-label="Pausar">⏸<span class="lbl"> Pausar</span></button>
+    <button id="stop" title="Parar" aria-label="Parar">⏹<span class="lbl"> Parar</span></button>
   </div>
   <div class="group">
-    <button id="projects">📁 Projetos</button>
-    <button id="save" title="Salvar (Ctrl+S)">💾 Salvar</button>
-    <button id="clear">Limpar</button>
+    <button id="projects" title="Projetos" aria-label="Projetos">📁<span class="lbl"> Projetos</span></button>
+    <button id="save" title="Salvar (Ctrl+S)" aria-label="Salvar">💾<span class="lbl"> Salvar</span></button>
+    <button id="score" class="gold" aria-label="Partitura em PDF">🎼 Partitura<span class="lbl"> (PDF)</span></button>
   </div>
   <div class="group">
-    <button id="score" class="gold">🎼 Partitura (PDF)</button>
-    <button id="exMidi">MIDI</button>
-    <button id="exWav">WAV</button>
-    <button id="exJson">JSON</button>
-    <button id="imJson">Importar</button>
+    <button id="adjBtn" title="Ajustes e exportação" aria-label="Ajustes">⚙<span class="lbl"> Ajustes</span></button>
+    <button id="helpBtn" title="Como usar" aria-label="Como usar">❓<span class="lbl"> Ajuda</span></button>
   </div>
   <div id="status">Carregando saxofone…</div>
+
+  <div class="adv" id="adv">
+    <div class="group"><label for="inst">Sax</label>
+      <select id="inst">
+        <option value="alto_sax">Alto</option>
+        <option value="tenor_sax">Tenor</option>
+        <option value="soprano_sax">Soprano</option>
+        <option value="baritone_sax">Barítono</option>
+      </select>
+    </div>
+    <div class="group"><label for="bpm">BPM</label><input id="bpm" type="number" min="30" max="240" value="100"></div>
+    <div class="group"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></div>
+    <div class="group"><label for="meas">Compassos</label><input id="meas" type="number" min="1" max="64" value="4"></div>
+    <div class="group"><label for="len">Nova nota</label>
+      <select id="len">
+        <option value="last">Última editada</option>
+        <option value="1">Semicolcheia</option>
+        <option value="2">Colcheia</option>
+        <option value="4" selected>Semínima</option>
+        <option value="8">Mínima</option>
+        <option value="16">Semibreve</option>
+      </select>
+    </div>
+    <div class="group"><label for="snap">Ímã</label>
+      <select id="snap" title="Alinhamento ao arrastar (segure Shift para ignorar)">
+        <option value="0">Livre</option>
+        <option value="0.5">1/32</option>
+        <option value="1" selected>1/16</option>
+        <option value="2">1/8</option>
+        <option value="4">1/4</option>
+      </select>
+    </div>
+    <div class="group">
+      <button id="clear">Limpar</button>
+      <button id="exMidi">MIDI</button>
+      <button id="exWav">WAV</button>
+      <button id="exJson">JSON</button>
+      <button id="imJson">Importar</button>
+    </div>
+  </div>
 </div>
 
 <main>
@@ -187,13 +214,24 @@
     </div>
   </div>
 </main>
-<div class="help">
-  <b>Criar:</b> clique numa célula vazia (arraste para o lado para já definir a duração) ·
-  <b>Mover:</b> arraste a nota (para cima/baixo muda o tom, para os lados muda o tempo) ·
-  <b>Duração:</b> arraste a borda direita da nota, com qualquer valor (ex.: colcheia pontuada = 3 passos de 1/16) ·
-  <b>Remover:</b> duplo clique/toque, botão direito ou <kbd>Delete</kbd> ·
-  <b>Livre:</b> segure <kbd>Shift</kbd> ao arrastar para ignorar o ímã ·
-  <b>Teclado:</b> com uma nota selecionada, <kbd>↑</kbd><kbd>↓</kbd> mudam o tom (+<kbd>Shift</kbd> = oitava) e <kbd>←</kbd><kbd>→</kbd> movem no tempo.
+<div class="modal" id="mHelp" hidden>
+  <div class="sheet">
+    <div class="mhead"><h2>Como usar</h2><button class="x" data-close>✕</button></div>
+    <div class="mbody">
+      <ul class="how">
+        <li><b>Criar uma nota:</b> clique (ou toque) numa célula vazia da grade. No computador, arraste para o lado para já definir a duração.</li>
+        <li><b>Mover:</b> arraste a nota. Para cima ou para baixo muda o tom, para os lados muda o tempo.</li>
+        <li><b>Duração livre:</b> arraste a alça na borda direita da nota. Vale qualquer tamanho, como a colcheia pontuada (3 passos de 1/16).</li>
+        <li><b>Remover:</b> toque duas vezes na nota (no computador: duplo clique, botão direito ou <kbd>Delete</kbd>).</li>
+        <li><b>Ouvir um tom:</b> toque no nome da nota na coluna da esquerda.</li>
+        <li><b>Acordes:</b> coloque várias notas no mesmo tempo.</li>
+        <li><b>Ímã:</b> em ⚙ Ajustes, define o alinhamento ao arrastar. No computador, segure <kbd>Shift</kbd> para ignorá-lo.</li>
+        <li><b>Teclado (computador):</b> <kbd>Espaço</kbd> toca e pausa. Com uma nota selecionada, <kbd>↑</kbd><kbd>↓</kbd> mudam o tom (<kbd>Shift</kbd> = oitava) e <kbd>←</kbd><kbd>→</kbd> movem no tempo. <kbd>Ctrl</kbd>+<kbd>S</kbd> salva.</li>
+        <li><b>Salvar e exportar:</b> 📁 Projetos guarda na biblioteca ou numa pasta, 🎼 Partitura gera o PDF, e em ⚙ Ajustes ficam MIDI, WAV, JSON e Importar.</li>
+        <li><b>Instalar no celular:</b> no menu do navegador, escolha "Instalar aplicativo" ou "Adicionar à tela inicial".</li>
+      </ul>
+    </div>
+  </div>
 </div>
 <div id="tip"></div>
 <div id="loading">Gerando arquivo…</div>
@@ -1151,6 +1189,14 @@
     $('loading').style.display = 'none';
   };
 
+  /* ---------- ajustes recolhíveis e ajuda ---------- */
+  const adv = $('adv');
+  if(window.innerWidth < 900) adv.hidden = true;           // no celular os ajustes começam recolhidos
+  const syncAdj = () => $('adjBtn').classList.toggle('active', !adv.hidden);
+  syncAdj();
+  $('adjBtn').onclick = () => { adv.hidden = !adv.hidden; syncAdj(); };
+  $('helpBtn').onclick = () => openModal('mHelp');
+
   /* ---------- eventos da barra ---------- */
   $('play').onclick = play;
   $('pause').onclick = pause;
@@ -1221,6 +1267,11 @@
   updateName();
   $('wrap').scrollTop = (HIGH - 81) * ROWH;   // começa por volta do Sol5, onde o sax soa mais à vontade
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // na primeira visita, mostra a janela "Como usar" uma única vez
+  try{
+    if(!localStorage.getItem('saxcrafter:help')){ localStorage.setItem('saxcrafter:help', '1'); openModal('mHelp'); }
+  }catch(e){}
 
   // ganchos para teste automatizado
   window.__sax = {
