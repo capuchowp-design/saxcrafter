@@ -164,15 +164,14 @@
     <button id="adjBtn" title="Ajustes e exportação" aria-label="Ajustes">⚙<span class="lbl"> Ajustes</span></button>
     <button id="helpBtn" title="Como usar" aria-label="Como usar">❓<span class="lbl"> Ajuda</span></button>
   </div>
-  <div id="status">Carregando saxofone…</div>
+  <div id="status">Preparando o saxofone…</div>
 
   <div class="adv" id="adv">
-    <div class="group"><label for="inst">Sax</label>
-      <select id="inst">
-        <option value="alto_sax">Alto</option>
-        <option value="tenor_sax">Tenor</option>
-        <option value="soprano_sax">Soprano</option>
-        <option value="baritone_sax">Barítono</option>
+    <div class="group"><label for="vib">Vibrato</label>
+      <select id="vib">
+        <option value="0">Nenhum</option>
+        <option value="9" selected>Suave</option>
+        <option value="18">Médio</option>
       </select>
     </div>
     <div class="group"><label for="bpm">BPM</label><input id="bpm" type="number" min="30" max="240" value="100"></div>
@@ -231,6 +230,7 @@
         <li><b>Ímã:</b> em ⚙ Ajustes, define o alinhamento ao arrastar. No computador, segure <kbd>Shift</kbd> para ignorá-lo.</li>
         <li><b>Teclado (computador):</b> <kbd>Espaço</kbd> toca e pausa. Com uma nota selecionada, <kbd>↑</kbd><kbd>↓</kbd> mudam o tom (<kbd>Shift</kbd> = oitava) e <kbd>←</kbd><kbd>→</kbd> movem no tempo. <kbd>Ctrl</kbd>+<kbd>S</kbd> salva.</li>
         <li><b>Salvar e exportar:</b> 📁 Projetos guarda na biblioteca ou numa pasta, 🎼 Partitura gera o PDF, e em ⚙ Ajustes ficam MIDI, WAV, JSON e Importar.</li>
+        <li><b>Som:</b> gravações reais de um saxofone alto (Karoryfer Samples, domínio público CC0). Em ⚙ Ajustes, o <b>Vibrato</b> dá vida às notas longas. Na partitura você escolhe para qual saxofone ela é escrita (alto, tenor, soprano, barítono ou em dó).</li>
         <li><b>Instalar no celular:</b> no menu do navegador, escolha "Instalar aplicativo" ou "Adicionar à tela inicial".</li>
       </ul>
       <div class="sec" style="margin-top:16px">
@@ -283,9 +283,12 @@
     <div class="mhead"><h2>Partitura</h2><button class="x" data-close>✕</button></div>
     <div class="opts">
       <label>Título <input type="text" id="scTitle" maxlength="60" placeholder="Título da música"></label>
-      <label>Escrita
+      <label>Escrita para
         <select id="scMode">
-          <option value="sax">Transposta para o sax</option>
+          <option value="alto_sax">Sax alto (Mi♭)</option>
+          <option value="tenor_sax">Sax tenor (Si♭)</option>
+          <option value="soprano_sax">Sax soprano (Si♭)</option>
+          <option value="baritone_sax">Sax barítono (Mi♭)</option>
           <option value="concert">Em dó (som real)</option>
         </select>
       </label>
@@ -305,7 +308,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+<script src="sax-samples.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.5/build/cjs/vexflow.js"></script>
 <script>
 (() => {
@@ -316,7 +319,6 @@
   const MIN_D = 0.25;                 // menor duração possível (1/64)
   const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
   const BLACK = new Set([1,3,6,8,10]);
-  const PROGRAM = {soprano_sax:64, alto_sax:65, tenor_sax:66, baritone_sax:67};
   const $ = id => document.getElementById(id);
   const noteName = m => NAMES[m % 12] + (Math.floor(m / 12) - 1);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -336,7 +338,7 @@
   let sel = null;                     // nota selecionada
   let lastD = 4;                      // última duração editada
   let drag = null, tapStart = null, lastTap = null, lastPreviewPitch = -1;
-  let ctx = null, inst = null, instName = 'alto_sax';
+  let ctx = null, engine = null;
   let playing = false, startedAt = 0, startStep = 0, posStep = 0, raf = 0, endTimer = 0;
   let projName = 'Sem título';
   let current = null;                 // {kind:'library', id} | {kind:'folder', file}
@@ -352,32 +354,113 @@
     if(ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
-  let masterGain = null;
-  function master(){
-    if(!masterGain){ masterGain = ctx.createGain(); masterGain.connect(ctx.destination); }
-    masterGain.gain.value = +$('vol').value;
-    return masterGain;
+  /* ---------- saxofone real: sampler próprio com gravações ---------- */
+  const SAMPLES = window.SAX_SAMPLES || null;
+  let rawSamples = null;                       // PCM decodificado (independe do AudioContext)
+  function decodeSamples(){
+    if(rawSamples || !SAMPLES) return rawSamples;
+    rawSamples = SAMPLES.roots.map(r => {
+      const midi = r[0], ls = r[1], len = r[2], bin = atob(r[3]);
+      const u8 = new Uint8Array(bin.length);
+      for(let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const dv = new DataView(u8.buffer), f = new Float32Array(len);
+      for(let i = 0; i < len; i++) f[i] = dv.getInt16(i * 2, true) / 32768;
+      return {midi, ls, data: f};
+    });
+    return rawSamples;
   }
-  function loadInstrument(){
-    if(typeof Soundfont === 'undefined'){ setStatus('Sem conexão com as amostras'); return Promise.resolve(); }
+  function makeIR(actx){                        // reverberação suave de sala (resposta ao impulso gerada)
+    const sr = actx.sampleRate, len = Math.floor(sr * 1.5), buf = actx.createBuffer(2, len, sr);
+    for(let ch = 0; ch < 2; ch++){
+      const d = buf.getChannelData(ch); let lp = 0;
+      for(let i = 0; i < len; i++){
+        const t = i / len, pre = i < sr * 0.012 ? 0 : 1;
+        lp += ((Math.random() * 2 - 1) * Math.pow(1 - t, 2.6) * pre - lp) * 0.35;
+        d[i] = lp;
+      }
+    }
+    return buf;
+  }
+  class SaxEngine{
+    constructor(actx, dest, vol){
+      this.c = actx; this.voices = new Set();
+      this.bufs = decodeSamples().map(s => {
+        const b = actx.createBuffer(1, s.data.length, SAMPLES.sr); b.copyToChannel(s.data, 0);
+        return {midi: s.midi, ls: s.ls, buf: b};
+      });
+      this.master = actx.createGain(); this.master.gain.value = vol;
+      const comp = actx.createDynamicsCompressor();
+      comp.threshold.value = -12; comp.knee.value = 14; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.25;
+      this.master.connect(comp); comp.connect(dest);
+      this.bus = actx.createGain(); this.bus.gain.value = 1.5;
+      const dry = actx.createGain(); dry.gain.value = 0.86;
+      const wet = actx.createGain(); wet.gain.value = 0.2;
+      const conv = actx.createConvolver(); conv.buffer = makeIR(actx);
+      this.bus.connect(dry); dry.connect(this.master);
+      this.bus.connect(conv); conv.connect(wet); wet.connect(this.master);
+    }
+    setVolume(v){ this.master.gain.value = v; }
+    play(midi, when, dur, vib){
+      const a = this.c;
+      let root = this.bufs[0];
+      for(const b of this.bufs) if(Math.abs(b.midi - midi) < Math.abs(root.midi - midi)) root = b;
+      const src = a.createBufferSource();
+      src.buffer = root.buf; src.loop = true;
+      src.loopStart = root.ls / SAMPLES.sr; src.loopEnd = root.buf.duration;
+      src.playbackRate.value = Math.pow(2, (midi - root.midi) / 12);
+      const g = a.createGain(), end = when + Math.max(0.05, dur), A = 0.008, R = 0.14;
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(1, when + A);
+      g.gain.setValueAtTime(1, Math.max(when + A, end));
+      g.gain.linearRampToValueAtTime(0, end + R);
+      src.connect(g); g.connect(this.bus);
+      let lfo = null;
+      if(vib > 0 && dur > 0.45){                // vibrato que entra depois do ataque, como num sax de verdade
+        lfo = a.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 5 + Math.random() * 0.7;
+        const lg = a.createGain();
+        lg.gain.setValueAtTime(0, when); lg.gain.setValueAtTime(0, when + 0.28);
+        lg.gain.linearRampToValueAtTime(vib, when + 0.8);
+        lfo.connect(lg); lg.connect(src.detune);
+        lfo.start(when); lfo.stop(end + R + 0.02);
+      }
+      src.start(when); src.stop(end + R + 0.02);
+      const v = {src, g, lfo}; this.voices.add(v);
+      src.onended = () => this.voices.delete(v);
+      return v;
+    }
+    stopAll(){
+      const t = this.c.currentTime;
+      this.voices.forEach(v => { try{
+        v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(v.g.gain.value, t);
+        v.g.gain.linearRampToValueAtTime(0, t + 0.03); v.src.stop(t + 0.04); if(v.lfo) v.lfo.stop(t + 0.04);
+      }catch(e){} });
+      this.voices.clear();
+    }
+  }
+  const vibDepth = () => +$('vib').value || 0;
+  function getEngine(){
+    if(!SAMPLES){ setStatus('Faltou o arquivo sax-samples.js: envie-o junto com o index.html'); return null; }
     ensureCtx();
-    instName = $('inst').value;
-    setStatus('Carregando ' + $('inst').selectedOptions[0].text + '…');
-    inst = null;
-    return Soundfont.instrument(ctx, instName, {soundfont:'MusyngKite', gain: 2, destination: master()})
-      .then(i => { inst = i; setStatus('Saxofone pronto', true); })
-      .catch(() => setStatus('Falha ao carregar amostras (verifique a internet)'));
+    if(!engine){
+      try{ engine = new SaxEngine(ctx, ctx.destination, +$('vol').value); }
+      catch(e){ console.error(e); setStatus('Não foi possível preparar o som'); return null; }
+    }
+    return engine;
+  }
+  function prepareSamples(){
+    if(!SAMPLES){ setStatus('Faltou o arquivo sax-samples.js: envie-o junto com o index.html'); return; }
+    setTimeout(() => { try{ decodeSamples(); setStatus('Saxofone real pronto', true); }catch(e){ console.error(e); setStatus('As amostras do sax estão corrompidas'); } }, 30);
   }
 
   function previewNote(m, dur){
-    ensureCtx();
-    if(!inst) return;
-    inst.play(noteName(m), ctx.currentTime, {duration: dur || 0.6});
+    const eng = getEngine();
+    if(!eng) return;
+    eng.play(m, ctx.currentTime, dur || 0.6, 0);
   }
 
   function play(){
-    ensureCtx();
-    if(!inst){ setStatus('Aguarde o saxofone carregar…'); return; }
+    const eng = getEngine();
+    if(!eng) return;
     stopSound();
     const total = steps();
     if(posStep >= total) posStep = 0;
@@ -390,7 +473,7 @@
       const from = Math.max(n.s, startStep);
       const when = t0 + (from - startStep) * ss;
       const dur = Math.max(0.05, (Math.min(n.s + n.d, total) - from) * ss);
-      inst.play(noteName(n.p), when, {duration: dur, gain: 1});
+      eng.play(n.p, when, dur, vibDepth());
     });
     playing = true;
     $('playhead').style.display = 'block';
@@ -413,7 +496,7 @@
     if(x < w.scrollLeft + 70 || x > w.scrollLeft + w.clientWidth - 40) w.scrollLeft = Math.max(0, x - 120);
   }
   function stopSound(){
-    if(inst) try{ inst.stop(); }catch(e){}
+    if(engine) engine.stopAll();
     clearTimeout(endTimer);
     cancelAnimationFrame(raf);
     playing = false;
@@ -615,16 +698,18 @@
   window.addEventListener('pointerup', e => endDrag(e, false));
   window.addEventListener('pointercancel', e => endDrag(e, true));
 
+  function setSel(id, val){ const el = $(id); if(val != null && [...el.options].some(o => o.value === String(val))) el.value = String(val); }
+
   /* ---------- projeto: estado, JSON ---------- */
-  const snapshot = () => ({v:3, name:projName, bpm:+$('bpm').value, measures:+$('meas').value, inst:$('inst').value, vol:+$('vol').value, notes});
+  const snapshot = () => ({v:3, name:projName, bpm:+$('bpm').value, measures:+$('meas').value, score:$('scMode').value, vib:+$('vib').value, vol:+$('vol').value, notes});
   function apply(d){
     if(!d || !Array.isArray(d.notes)) throw new Error('arquivo inválido');
     $('bpm').value = d.bpm || 100; $('meas').value = d.measures || 4; $('vol').value = d.vol ?? 0.8;
     notes = d.notes.filter(n => Number.isFinite(n.p) && Number.isFinite(n.s) && Number.isFinite(n.d) && n.d > 0);
     sel = null;
     if(typeof d.name === 'string' && d.name.trim()) projName = d.name.trim();
-    if(d.inst && d.inst !== $('inst').value){ $('inst').value = d.inst; if(ctx) loadInstrument(); }
-    if(masterGain) masterGain.gain.value = +$('vol').value;
+    setSel('scMode', d.score || d.inst); if(d.vib != null) setSel('vib', d.vib);
+    if(engine) engine.setVolume(+$('vol').value);
     stop(); build(); updateName();
   }
   function updateName(){
@@ -858,7 +943,7 @@
     });
     ev.sort((a,b) => a[0] - b[0] || a[1] - b[1]);
     const mpq = Math.round(60000000 / (+$('bpm').value || 100));
-    const tr = [0,0xff,0x51,3,(mpq>>16)&255,(mpq>>8)&255,mpq&255, 0,0xc0,PROGRAM[$('inst').value]];
+    const tr = [0,0xff,0x51,3,(mpq>>16)&255,(mpq>>8)&255,mpq&255, 0,0xc0,65];   // programa 65 = sax alto
     let last = 0;
     ev.forEach(([t, on, p]) => { tr.push(...vlq(t - last), on ? 0x90 : 0x80, p, on ? 90 : 0); last = t; });
     tr.push(0,0xff,0x2f,0);
@@ -885,25 +970,27 @@
     }
     return new Blob([out], {type:'audio/wav'});
   }
+  async function renderBuffer(){
+    const sr = 44100, ss = stepSec();
+    const end = Math.max(...notes.map(n => n.s + n.d)) * ss + 2;
+    const off = new OfflineAudioContext(2, Math.ceil(end * sr), sr);
+    const eng = new SaxEngine(off, off.destination, +$('vol').value);
+    const vib = vibDepth();
+    notes.forEach(n => eng.play(n.p, n.s * ss, Math.max(0.05, n.d * ss), vib));
+    return off.startRendering();
+  }
   async function exportWav(){
     if(!notes.length){ setStatus('Adicione notas antes de exportar'); return; }
+    if(!SAMPLES){ setStatus('Faltou o arquivo sax-samples.js'); return; }
     $('loading').style.display = 'flex';
-    try{
-      const sr = 44100, ss = stepSec();
-      const end = Math.max(...notes.map(n => n.s + n.d)) * ss + 1.5;
-      const off = new OfflineAudioContext(2, Math.ceil(end * sr), sr);
-      const g = off.createGain(); g.gain.value = +$('vol').value; g.connect(off.destination);
-      const i = await Soundfont.instrument(off, $('inst').value, {soundfont:'MusyngKite', gain:2, destination:g});
-      notes.forEach(n => i.play(noteName(n.p), n.s * ss, {duration: Math.max(0.05, n.d * ss), gain: 1}));
-      const rendered = await off.startRendering();
-      download(safeName(projName) + '.wav', wavBlob(rendered));
-    }catch(e){ setStatus('Não foi possível gerar o WAV'); }
+    try{ download(safeName(projName) + '.wav', wavBlob(await renderBuffer())); }
+    catch(e){ console.error(e); setStatus('Não foi possível gerar o WAV'); }
     $('loading').style.display = 'none';
   }
 
   /* ---------- partitura (notação) ---------- */
   const TRANSPOSE = {soprano_sax:2, alto_sax:9, tenor_sax:14, baritone_sax:21};   // semitons: som -> escrita
-  const INST_LABEL = {soprano_sax:'Sax soprano', alto_sax:'Sax alto', tenor_sax:'Sax tenor', baritone_sax:'Sax barítono'};
+  const INST_LABEL = {soprano_sax:'Sax soprano', alto_sax:'Sax alto', tenor_sax:'Sax tenor', baritone_sax:'Sax barítono', concert:'Saxofone'};
   const KEY_NAME = ['c','c#','d','d#','e','f','f#','g','g#','a','a#','b'];
   const KEY_LETTER = ['c','c','d','d','e','f','f','g','g','a','a','b'];
   const KEY_SHARP = [0,1,0,1,0,0,1,0,1,0,1,0];
@@ -973,7 +1060,7 @@
     const VF = window.Vex && window.Vex.Flow;
     if(!VF) throw new Error('vexflow');
     const {Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Beam, Dot, StaveTie, Barline} = VF;
-    const semis = opts.mode === 'sax' ? (TRANSPOSE[$('inst').value] || 0) : 0;
+    const semis = TRANSPOSE[opts.mode] || 0;
     const nMeas = steps() / 16;
 
     // 1) peças (notas/acordes/pausas) já divididas em valores de figura padrão
@@ -1070,7 +1157,7 @@
     };
     let page = newPage(), y = 135;
     svgText(page.svg, opts.title || 'Sem título', W / 2, 62, 28, {bold:true, anchor:'middle'});
-    svgText(page.svg, (INST_LABEL[$('inst').value] || 'Saxofone') + (semis ? ' · escrita transposta' : ' · em dó (som real)'),
+    svgText(page.svg, (INST_LABEL[opts.mode] || 'Saxofone') + (semis ? ' · escrita transposta' : ' · em dó (som real)'),
             W / 2, 86, 13, {italic:true, anchor:'middle'});
 
     const loc = new Map();
@@ -1259,6 +1346,7 @@
         }catch(e){ line(false, ic.src + ' não encontrado'); }
       }
     }
+    line(!!SAMPLES, 'sax-samples.js carregado (sons reais de saxofone)');
     try{
       const regs = await navigator.serviceWorker.getRegistrations();
       line(regs.length > 0, 'Service worker registrado');
@@ -1274,8 +1362,7 @@
   $('play').onclick = play;
   $('pause').onclick = pause;
   $('stop').onclick = stop;
-  $('inst').onchange = () => { stopSound(); loadInstrument(); };
-  $('vol').oninput = () => { if(masterGain) masterGain.gain.value = +$('vol').value; };
+  $('vol').oninput = () => { if(engine) engine.setVolume(+$('vol').value); };
   $('bpm').onchange = () => { if(playing){ const p = posStep; stopSound(); posStep = p; play(); } };
   $('meas').onchange = () => { stop(); build(); };
   $('clear').onclick = () => { if(!notes.length || confirm('Apagar todas as notas?')){ notes = []; sel = null; renderNotes(); } };
@@ -1319,7 +1406,7 @@
   });
 
   // navegadores só liberam áudio após um gesto do usuário
-  const first = () => { ensureCtx(); if(!inst) loadInstrument(); document.removeEventListener('pointerdown', first); };
+  const first = () => { ensureCtx(); document.removeEventListener('pointerdown', first); };
   document.addEventListener('pointerdown', first);
 
   /* ---------- rascunho automático (volta de onde você parou) ---------- */
@@ -1338,6 +1425,7 @@
 
   build();
   updateName();
+  prepareSamples();
   $('wrap').scrollTop = (HIGH - 81) * ROWH;   // começa por volta do Sol5, onde o sax soa mais à vontade
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
@@ -1348,8 +1436,8 @@
 
   // ganchos para teste automatizado
   window.__sax = {
-    setNotes(arr, measures, inst){ notes = arr; if(measures) $('meas').value = measures; if(inst) $('inst').value = inst; build(); },
-    buildScore, makePdf, steps
+    setNotes(arr, measures, mode){ notes = arr; if(measures) $('meas').value = measures; if(mode) setSel('scMode', mode); build(); },
+    buildScore, makePdf, steps, renderBuffer, SaxEngine
   };
 })();
 </script>

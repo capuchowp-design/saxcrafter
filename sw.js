@@ -1,5 +1,5 @@
-const CACHE = 'saxcrafter-v4';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'saxcrafter-v5';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './sax-samples.js'];
 
 // Instala sem falhar se algum arquivo estiver ausente (cada um é guardado separadamente).
 self.addEventListener('install', e => {
