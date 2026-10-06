@@ -78,6 +78,9 @@
   body.moving, body.moving *{cursor:grabbing !important}
   @media (pointer:coarse){ .note .grip{width:16px} .note{height:20px} }
 
+  #endcol{position:absolute;top:0;bottom:0;width:150px;pointer-events:none}
+  main{position:relative}
+  #fab{position:absolute;right:26px;bottom:26px;z-index:8;width:48px;height:48px;border-radius:50%;padding:0;font-size:26px;line-height:1;font-weight:700;background:linear-gradient(180deg,var(--amber),var(--gold));color:#1a1204;border:1px solid var(--gold);box-shadow:0 4px 16px #000a}
   #playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);z-index:4;pointer-events:none;display:none}
   #tip{position:fixed;z-index:60;pointer-events:none;display:none;background:#0d0a07ee;border:1px solid var(--gold);
        color:var(--amber);padding:4px 9px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
@@ -176,7 +179,7 @@
     </div>
     <div class="group"><label for="bpm">BPM</label><input id="bpm" type="number" min="30" max="240" value="100"></div>
     <div class="group"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></div>
-    <div class="group"><label for="meas" title="Cresce sozinho conforme você compõe">Compassos</label><input id="meas" type="number" min="1" max="10000" value="4" title="Cresce sozinho conforme você compõe"></div>
+    <div class="group"><label for="meas">Compassos</label><input id="meas" type="number" min="1" max="2000" value="4"> <button id="addMeas" title="Acrescentar 4 compassos">＋4</button></div>
     <div class="group"><label for="len">Nova nota</label>
       <select id="len">
         <option value="last">Última editada</option>
@@ -211,9 +214,11 @@
     <div id="grid">
       <div id="rows"></div>
       <div id="layer"></div>
+      <div id="endcol"></div>
       <div id="playhead"></div>
     </div>
   </div>
+  <button id="fab" title="Acrescentar mais compassos" aria-label="Acrescentar compassos">＋</button>
 </main>
 <div class="modal" id="mHelp" hidden>
   <div class="sheet">
@@ -223,10 +228,10 @@
         <li><b>Criar uma nota:</b> clique (ou toque) numa célula vazia da grade. No computador, arraste para o lado para já definir a duração.</li>
         <li><b>Mover:</b> arraste a nota. Para cima ou para baixo muda o tom, para os lados muda o tempo. No celular, segure a nota por meio segundo até vibrar e então arraste.</li>
         <li><b>Rolar a grade:</b> arraste o dedo em qualquer lugar da grade, inclusive sobre as notas. A barra de cima fica sempre visível.</li>
-        <li><b>Sem limite de tamanho:</b> a grade cresce sozinha. Ao rolar ou arrastar uma nota até a borda direita, entram mais compassos. O campo <b>Compassos</b> em ⚙ Ajustes só mostra o tamanho atual.</li>
         <li><b>Duração livre:</b> arraste a alça na borda direita da nota. Vale qualquer tamanho, como a colcheia pontuada (3 passos de 1/16).</li>
         <li><b>Remover:</b> toque duas vezes na nota (no computador: duplo clique, botão direito ou <kbd>Delete</kbd>).</li>
         <li><b>Ouvir um tom:</b> toque no nome da nota na coluna da esquerda.</li>
+        <li><b>Sem limite:</b> a música cresce com você. Ao escrever, esticar ou arrastar uma nota perto do fim, e ao rolar a grade para a direita, entram mais compassos. Para ir mais longe de uma vez, use o botão redondo <b>＋</b> no canto da grade ou o <b>＋4</b> em ⚙ Ajustes. Ao arrastar uma nota até a borda, a grade rola sozinha.</li>
         <li><b>Acordes:</b> coloque várias notas no mesmo tempo.</li>
         <li><b>Ímã:</b> em ⚙ Ajustes, define o alinhamento ao arrastar. No computador, segure <kbd>Shift</kbd> para ignorá-lo.</li>
         <li><b>Teclado (computador):</b> <kbd>Espaço</kbd> toca e pausa. Com uma nota selecionada, <kbd>↑</kbd><kbd>↓</kbd> mudam o tom (<kbd>Shift</kbd> = oitava) e <kbd>←</kbd><kbd>→</kbd> movem no tempo. <kbd>Ctrl</kbd>+<kbd>S</kbd> salva.</li>
@@ -317,6 +322,8 @@
   const LOW = 48, HIGH = 84;          // C3 .. C6
   const CELL = 28;                    // largura de 1 passo (1/16 de compasso)
   const ROWH = 22;                    // altura de cada linha de tom
+  const MAX_MEAS = 2000;              // teto de segurança (na prática, sem limite)
+  const ENDW = 150;                   // largura da área do botão ＋ no fim da grade
   const MIN_D = 0.25;                 // menor duração possível (1/64)
   const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
   const BLACK = new Set([1,3,6,8,10]);
@@ -340,33 +347,29 @@
   let lastD = 4;                      // última duração editada
   let drag = null, tapStart = null, lastTap = null, lastPreviewPitch = -1;
   let ctx = null, engine = null;
+  let playEnd = 0;
   let playing = false, startedAt = 0, startStep = 0, posStep = 0, raf = 0, endTimer = 0;
   let projName = 'Sem título';
   let current = null;                 // {kind:'library', id} | {kind:'folder', file}
 
-  /* comprimento da composição: cresce sozinho (sem limite prático; 10000 compassos é só uma trava de segurança) */
-  const MAX_MEAS = 10000;
-  let lenMeas = 4, playEnd = 0;
-  const steps = () => lenMeas * 16;
-  const lastEnd = () => notes.reduce((m, n) => Math.max(m, n.s + n.d), 0);
-  const contentMeas = () => Math.max(1, Math.ceil(lastEnd() / 16 - 1e-9));
-  function applyWidth(){
-    const w = steps() * CELL;
-    $('grid').style.width = (54 + w) + 'px';
-    $('layer').style.width = w + 'px';
-    document.querySelectorAll('#rows .cells').forEach(c => { c.style.width = w + 'px'; });
+  const steps = () => Math.max(1, Math.min(MAX_MEAS, +$('meas').value || 4)) * 16;
+  const lastStep = () => notes.reduce((m, n) => Math.max(m, n.s + n.d), 0);
+  const neededMeasures = () => Math.max(1, Math.ceil(lastStep() / 16 - 1e-9));
+  const usedSteps = () => neededMeasures() * 16;               // trecho que realmente tem música
+  function setMeasures(n){                                      // muda a largura da grade sem recriá-la
+    n = clamp(Math.round(n) || 1, neededMeasures(), MAX_MEAS);
+    $('meas').value = n;
+    const width = n * 16 * CELL;
+    $('grid').style.width = (54 + width + ENDW) + 'px';
+    document.querySelectorAll('.cells').forEach(c => c.style.width = width + 'px');
+    $('layer').style.width = width + 'px';
+    $('endcol').style.left = (54 + width) + 'px';
   }
-  function growTo(m){
-    m = Math.min(MAX_MEAS, Math.ceil(m));
-    if(m <= lenMeas) return false;
-    lenMeas = m; $('meas').value = m; applyWidth();
-    return true;
+  function growFor(endStep){                                    // garante sempre 1 compasso livre depois da última nota
+    const need = Math.ceil(endStep / 16 - 1e-9) + 1;
+    if(need > steps() / 16) setMeasures(need);
   }
-  // mantém sempre espaço livre à direita: ao chegar perto do fim da grade, ela ganha mais compassos
-  function autoExtend(){
-    const w = $('wrap');
-    for(let i = 0; i < 200 && lenMeas < MAX_MEAS && w.scrollWidth - w.clientWidth - w.scrollLeft < 900; i++) growTo(lenMeas + 4);
-  }
+  const fitMeasures = () => growFor(lastStep());
   const stepSec = () => 60 / (Math.max(30, Math.min(240, +$('bpm').value || 100))) / 4;
 
   function setStatus(t, ok){ const s = $('status'); s.textContent = t; s.className = ok ? 'ok' : ''; }
@@ -482,34 +485,34 @@
   }
 
   function play(){
+    if(!notes.length){ setStatus('Crie algumas notas primeiro'); return; }
     const eng = getEngine();
     if(!eng) return;
     stopSound();
-    const total = Math.max(1, lastEnd());
-    playEnd = total;
-    if(posStep >= total) posStep = 0;
+    playEnd = lastStep();
+    if(posStep >= playEnd) posStep = 0;
     startStep = posStep;
     const t0 = ctx.currentTime + 0.08;
     startedAt = t0;
     const ss = stepSec();
     notes.forEach(n => {
-      if(n.s + n.d <= startStep || n.s >= total) return;
+      if(n.s + n.d <= startStep) return;
       const from = Math.max(n.s, startStep);
       const when = t0 + (from - startStep) * ss;
-      const dur = Math.max(0.05, (Math.min(n.s + n.d, total) - from) * ss);
+      const dur = Math.max(0.05, (n.s + n.d - from) * ss);
       eng.play(n.p, when, dur, vibDepth());
     });
     playing = true;
     $('playhead').style.display = 'block';
     $('play').classList.add('active');
     clearTimeout(endTimer);
-    endTimer = setTimeout(() => { if(playing){ stop(); } }, ((total - startStep) * ss + 0.6) * 1000);
+    endTimer = setTimeout(() => { if(playing){ stop(); } }, ((playEnd - startStep) * ss + 0.6) * 1000);
     cancelAnimationFrame(raf); tick();
   }
   function tick(){
     if(!playing) return;
     const s = startStep + Math.max(0, ctx.currentTime - startedAt) / stepSec();
-    posStep = Math.min(s, playEnd || steps());
+    posStep = Math.min(s, playEnd);
     movePlayhead(posStep);
     raf = requestAnimationFrame(tick);
   }
@@ -531,9 +534,11 @@
 
   /* ---------- grade ---------- */
   function build(){
+    fitMeasures();
     const rows = $('rows'); rows.innerHTML = '';
     const total = steps(), width = total * CELL;
-    $('grid').style.width = (54 + width) + 'px';
+    $('grid').style.width = (54 + width + ENDW) + 'px';
+    $('endcol').style.left = (54 + width) + 'px';
     for(let m = HIGH; m >= LOW; m--){
       const kind = BLACK.has(m % 12) ? 'black' : 'white';
       const row = document.createElement('div'); row.className = 'row';
@@ -557,7 +562,6 @@
     layer.style.width = width + 'px';
     layer.style.height = ((HIGH - LOW + 1) * ROWH) + 'px';
     renderNotes();
-    autoExtend();
   }
 
   function place(el, n){
@@ -576,8 +580,8 @@
   }
   function renderNotes(){
     const layer = $('layer'); layer.innerHTML = '';
-    notes = notes.filter(n => n.p >= LOW && n.p <= HIGH);
-    growTo(contentMeas() + 2);                    // sempre sobram 2 compassos vazios depois da última nota
+    notes = notes.filter(n => n.p >= LOW && n.p <= HIGH && n.s >= 0);
+    fitMeasures();
     notes.forEach(n => {
       const el = addNoteEl(n);
       if(n === sel) el.classList.add('sel');
@@ -612,16 +616,17 @@
     const g = snapStep();
     let s = (e.shiftKey || !g) ? x / CELL : Math.floor(x / CELL / g) * g;
     s = Math.max(0, s);
-    const total = steps();
     let d = $('len').value === 'last' ? lastD : +$('len').value;
+    if(d < MIN_D) return;
     const n = {p, s, d};
     notes.push(n);
-    growTo(contentMeas() + 2);
+    growFor(s + d);
     const el = addNoteEl(n);
     select(el);
     previewNote(p);
     if(startDrag){
-      drag = {mode:'resize', n, el, x0:e.clientX, y0:e.clientY, sl0:$('wrap').scrollLeft, s0:s, p0:p, d0:d, moved:false, id:e.pointerId, created:true};
+      drag = {mode:'resize', n, el, x0:e.clientX, y0:e.clientY, s0:s, p0:p, d0:d, moved:false, id:e.pointerId, created:true,
+              sx0:$('wrap').scrollLeft, sy0:$('wrap').scrollTop, lx:e.clientX, ly:e.clientY, shift:e.shiftKey, armed:true};
       el.classList.add('drag');
       document.body.classList.add('resizing');
       showTip(e, n);
@@ -647,12 +652,13 @@
     select(el);
     const resize = e.target.classList.contains('grip');
     const pending = e.pointerType === 'touch' && !resize;      // no toque, mover exige segurar a nota
-    drag = {mode: resize ? 'resize' : 'move', n, el, x0:e.clientX, y0:e.clientY, sl0:$('wrap').scrollLeft, s0:n.s, p0:n.p, d0:n.d, moved:false, id:e.pointerId, created:false,
-            pending, armed: !pending, held:false, timer:0};
+    drag = {mode: resize ? 'resize' : 'move', n, el, x0:e.clientX, y0:e.clientY, s0:n.s, p0:n.p, d0:n.d, moved:false, id:e.pointerId, created:false,
+            pending, armed: !pending, held:false, timer:0, sx0:$('wrap').scrollLeft, sy0:$('wrap').scrollTop, lx:e.clientX, ly:e.clientY, shift:false};
     if(pending){
       drag.timer = setTimeout(() => {
         if(!drag || drag.el !== el || !drag.pending) return;
         drag.pending = false; drag.armed = true; drag.held = true;
+        drag.sx0 = $('wrap').scrollLeft; drag.sy0 = $('wrap').scrollTop;
         el.classList.add('drag'); document.body.classList.add('moving');
         if(navigator.vibrate) try{ navigator.vibrate(15); }catch(_){}
         showTip({clientX:drag.x0, clientY:drag.y0}, n);
@@ -675,9 +681,47 @@
   // com a nota "agarrada" (após segurar), o gesto move a nota em vez de rolar a grade
   window.addEventListener('touchmove', e => { if(drag && drag.armed && e.cancelable) e.preventDefault(); }, {passive:false});
 
+  function applyDrag(cx, cy, free){
+    const w = $('wrap');
+    const dx = (cx - drag.x0) + (w.scrollLeft - drag.sx0);       // a rolagem automática também desloca a nota
+    const dy = (cy - drag.y0) + (w.scrollTop - drag.sy0);
+    const n = drag.n;
+    if(drag.mode === 'move'){
+      n.s = Math.max(0, snapTo(drag.s0 + dx / CELL, free));
+      n.p = clamp(drag.p0 - Math.round(dy / ROWH), LOW, HIGH);
+      if(n.p !== lastPreviewPitch){ lastPreviewPitch = n.p; previewNote(n.p, 0.3); }
+    } else {
+      const minD = Math.max(MIN_D, free ? MIN_D : (snapStep() || MIN_D));
+      const end = snapTo(drag.s0 + drag.d0 + dx / CELL, free);
+      n.d = Math.max(minD, end - n.s);
+    }
+    growFor(n.s + n.d);                                           // a grade cresce junto com a nota
+    place(drag.el, n);
+    showTip({clientX:cx, clientY:cy}, n);
+  }
+  let asRaf = 0;
+  function autoScrollTick(){
+    asRaf = 0;
+    if(!drag) return;
+    if(drag.moved && drag.armed){
+      const w = $('wrap'), r = w.getBoundingClientRect(), EDGE = 56, LEFT = r.left + 54 + 36;
+      let vx = 0, vy = 0;
+      if(drag.lx > r.right - EDGE) vx = Math.min(1, (drag.lx - (r.right - EDGE)) / EDGE);
+      else if(drag.lx < LEFT) vx = -Math.min(1, (LEFT - drag.lx) / 60);
+      if(drag.ly > r.bottom - EDGE) vy = Math.min(1, (drag.ly - (r.bottom - EDGE)) / EDGE);
+      else if(drag.ly < r.top + EDGE) vy = -Math.min(1, (r.top + EDGE - drag.ly) / EDGE);
+      if(vx || vy){
+        const l0 = w.scrollLeft, t0 = w.scrollTop;
+        w.scrollLeft += vx * 20; w.scrollTop += vy * 20;
+        if(w.scrollLeft !== l0 || w.scrollTop !== t0) applyDrag(drag.lx, drag.ly, drag.shift);
+      }
+    }
+    asRaf = requestAnimationFrame(autoScrollTick);
+  }
   window.addEventListener('pointermove', e => {
     if(!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    drag.lx = e.clientX; drag.ly = e.clientY; drag.shift = e.shiftKey;
     if(drag.pending){
       // moveu antes de segurar: é um gesto de rolagem, não de mover a nota
       if(Math.hypot(dx, dy) > 10){ clearTimeout(drag.timer); drag.el.classList.remove('drag'); drag = null; }
@@ -685,24 +729,14 @@
     }
     if(!drag.moved && Math.hypot(dx, dy) < 4) return;
     drag.moved = true;
-    const n = drag.n, free = e.shiftKey, wrapEl = $('wrap');
-    const wr = wrapEl.getBoundingClientRect();
-    if(e.clientX > wr.right - 40) wrapEl.scrollLeft += 24;            // arrastar até a borda direita rola a grade
-    else if(e.clientX < wr.left + 94 && wrapEl.scrollLeft > 0) wrapEl.scrollLeft -= 24;
-    const dxs = dx + (wrapEl.scrollLeft - (drag.sl0 || 0));           // compensa a rolagem durante o arraste
-    if(drag.mode === 'move'){
-      n.s = Math.max(0, snapTo(drag.s0 + dxs / CELL, free));
-      n.p = clamp(drag.p0 - Math.round(dy / ROWH), LOW, HIGH);
-      if(n.p !== lastPreviewPitch){ lastPreviewPitch = n.p; previewNote(n.p, 0.3); }
-    } else {
-      const minD = Math.max(MIN_D, free ? MIN_D : (snapStep() || MIN_D));
-      const end = snapTo(drag.s0 + drag.d0 + dxs / CELL, free);
-      n.d = Math.max(minD, end - n.s);
-    }
-    growTo(contentMeas() + 2);
-    place(drag.el, n);
-    showTip(e, n);
+    applyDrag(e.clientX, e.clientY, e.shiftKey);
+    if(!asRaf) asRaf = requestAnimationFrame(autoScrollTick);
   });
+  // rolar a grade para a direita acrescenta compassos sozinho: nunca acaba
+  $('wrap').addEventListener('scroll', () => {
+    const w = $('wrap');
+    if(w.scrollLeft + w.clientWidth >= w.scrollWidth - 260 && steps() / 16 < MAX_MEAS) setMeasures(steps() / 16 + 4);
+  }, {passive:true});
 
   function endDrag(e, cancelled){
     if(tapStart && e.pointerId === tapStart.id){
@@ -732,7 +766,7 @@
   const snapshot = () => ({v:3, name:projName, bpm:+$('bpm').value, measures:+$('meas').value, score:$('scMode').value, vib:+$('vib').value, vol:+$('vol').value, notes});
   function apply(d){
     if(!d || !Array.isArray(d.notes)) throw new Error('arquivo inválido');
-    $('bpm').value = d.bpm || 100; $('meas').value = d.measures || 4; lenMeas = Math.max(1, Math.min(MAX_MEAS, d.measures || 4)); $('vol').value = d.vol ?? 0.8;
+    $('bpm').value = d.bpm || 100; $('meas').value = d.measures || 4; $('vol').value = d.vol ?? 0.8;
     notes = d.notes.filter(n => Number.isFinite(n.p) && Number.isFinite(n.s) && Number.isFinite(n.d) && n.d > 0);
     sel = null;
     if(typeof d.name === 'string' && d.name.trim()) projName = d.name.trim();
@@ -1052,7 +1086,7 @@
 
   // fatia a melodia em segmentos onde o conjunto de notas soando não muda
   function scoreSegments(){
-    const total = contentMeas() * 32;                        // 1 passo = 2 fusas
+    const total = usedSteps() * 2;                           // 1 passo = 2 fusas (só até a última nota)
     const items = notes.map(n => {
       let u = Math.round(n.s * 2), e = Math.round((n.s + n.d) * 2);
       u = clamp(u, 0, total - 1); e = clamp(e, u + 1, total);
@@ -1089,7 +1123,7 @@
     if(!VF) throw new Error('vexflow');
     const {Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Beam, Dot, StaveTie, Barline} = VF;
     const semis = TRANSPOSE[opts.mode] || 0;
-    const nMeas = contentMeas();
+    const nMeas = usedSteps() / 16;
 
     // 1) peças (notas/acordes/pausas) já divididas em valores de figura padrão
     const measures = Array.from({length:nMeas}, () => []);
@@ -1392,7 +1426,10 @@
   $('stop').onclick = stop;
   $('vol').oninput = () => { if(engine) engine.setVolume(+$('vol').value); };
   $('bpm').onchange = () => { if(playing){ const p = posStep; stopSound(); posStep = p; play(); } };
-  $('meas').onchange = () => { stop(); lenMeas = Math.max(contentMeas(), Math.min(MAX_MEAS, Math.max(1, Math.floor(+$('meas').value) || 4))); $('meas').value = lenMeas; build(); };
+  $('meas').onchange = () => setMeasures(+$('meas').value || 4);
+  const addMore = () => { setMeasures(steps() / 16 + 4); $('wrap').scrollBy({left: 360, behavior: 'smooth'}); };
+  $('fab').onclick = addMore;
+  $('addMeas').onclick = () => setMeasures(steps() / 16 + 4);
   $('clear').onclick = () => { if(!notes.length || confirm('Apagar todas as notas?')){ notes = []; sel = null; renderNotes(); } };
   $('exJson').onclick = () => download(safeName(projName) + '.saxcrafter.json', new Blob([JSON.stringify(snapshot(), null, 2)], {type:'application/json'}));
   $('imJson').onclick = () => $('file').click();
@@ -1419,7 +1456,6 @@
       e.preventDefault(); playing ? pause() : play(); return;
     }
     if(typing || !sel) return;
-    const total = steps();
     let handled = true;
     switch(e.key){
       case 'Delete': case 'Backspace': removeNote(sel); break;
@@ -1451,8 +1487,6 @@
     }catch(e){}
   }, 1500);
 
-  $('wrap').addEventListener('scroll', autoExtend, {passive:true});
-  window.addEventListener('resize', autoExtend);
   build();
   updateName();
   prepareSamples();
@@ -1466,8 +1500,8 @@
 
   // ganchos para teste automatizado
   window.__sax = {
-    setNotes(arr, measures, mode){ notes = arr; if(measures){ $('meas').value = measures; lenMeas = measures; } if(mode) setSel('scMode', mode); build(); },
-    buildScore, makePdf, steps, renderBuffer, SaxEngine
+    setNotes(arr, measures, mode){ notes = arr; if(measures) $('meas').value = measures; if(mode) setSel('scMode', mode); build(); },
+    buildScore, makePdf, steps, renderBuffer, SaxEngine, usedSteps, setMeasures
   };
 })();
 </script>

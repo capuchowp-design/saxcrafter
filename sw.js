@@ -1,4 +1,4 @@
-const CACHE = 'saxcrafter-v5';
+const CACHE = 'saxcrafter-v6';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './sax-samples.js'];
 
 // Instala sem falhar se algum arquivo estiver ausente (cada um é guardado separadamente).
