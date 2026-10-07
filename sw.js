@@ -1,5 +1,5 @@
-const CACHE = 'saxcrafter-v6';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './sax-samples.js'];
+const CACHE = 'saxcrafter-v7';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 // Instala sem falhar se algum arquivo estiver ausente (cada um é guardado separadamente).
 self.addEventListener('install', e => {
@@ -16,7 +16,7 @@ self.addEventListener('activate', e => {
       .then(() => self.clients.claim())
   );
 });
-// Rede primeiro; se estiver offline, usa o que já foi guardado (inclusive as amostras do sax e a biblioteca de partitura).
+// Rede primeiro (sempre pega a versão mais nova); se estiver offline, usa o que já foi guardado.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
